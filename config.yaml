@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: ocr-indexer
+description: Indexer for AssetContract registry and Asset subscriptions
+
+# Global contract definitions (no addresses here)
+contracts:
+  - name: AssetContract
+    abi_file_path: ./abis/AssetContract.json
+    handler: ./src/EventHandlers.ts
+    events:
+      - event: AssetCreated(bytes32 indexed assetId, address indexed asset)
+      - event: AssetRemoved(bytes32 indexed assetId)
+      - event: OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+
+  - name: Asset
+    abi_file_path: ./abis/Asset.json
+    handler: ./src/EventHandlers.ts
+    events:
+      - event: SubscriptionAdded(address indexed user, uint256 expiresAt)
+      - event: SubscriptionRevoked(address indexed user)
+      - event: OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+
+networks:
+  - id: 1
+    start_block: 0
+    contracts:
+      - name: AssetContract
+        address:
+          - "0x0000000000000000000000000000000000000000"
+      - name: Asset
+        address:
+          - "0x0000000000000000000000000000000000000000"
+
+unordered_multichain_mode: true
+preload_handlers: true
+address_format: lowercase

@@ -1,0 +1,34 @@
+type AssetContract_AssetCreated {
+  id: ID!
+  assetId: String!
+  asset: String!
+}
+
+type AssetContract_AssetRemoved {
+  id: ID!
+  assetId: String!
+}
+
+type AssetContract_OwnershipTransferred {
+  id: ID!
+  previousOwner: String!
+  newOwner: String!
+}
+
+type Asset_SubscriptionAdded {
+  id: ID!
+  user: String!
+  expiresAt: BigInt!
+}
+
+type Asset_SubscriptionRevoked {
+  id: ID!
+  user: String!
+}
+
+type Asset_OwnershipTransferred {
+  id: ID!
+  previousOwner: String!
+  newOwner: String!
+}
+
