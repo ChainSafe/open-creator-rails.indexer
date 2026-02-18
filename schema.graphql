@@ -2,11 +2,9 @@ type AssetContract_AssetCreated {
   id: ID!
   assetId: String!
   asset: String!
-}
-
-type AssetContract_AssetRemoved {
-  id: ID!
-  assetId: String!
+  subscriptionPrice: BigInt!
+  tokenAddress: String!
+  owner: String!
 }
 
 type AssetContract_OwnershipTransferred {
@@ -15,10 +13,25 @@ type AssetContract_OwnershipTransferred {
   newOwner: String!
 }
 
+type AssetContract_CreatorFeeShareUpdated {
+  id: ID!
+  newCreatorFeeShare: BigInt!
+}
+
+type AssetContract_RegistryFeeShareUpdated {
+  id: ID!
+  newRegistryFeeShare: BigInt!
+}
+
 type Asset_SubscriptionAdded {
   id: ID!
   user: String!
   expiresAt: BigInt!
+}
+
+type Asset_SubscriptionPriceUpdated {
+  id: ID!
+  newSubscriptionPrice: BigInt!
 }
 
 type Asset_SubscriptionRevoked {
@@ -31,4 +44,25 @@ type Asset_OwnershipTransferred {
   previousOwner: String!
   newOwner: String!
 }
+
+type AssetEntity {
+  id: ID!             # asset contract address (lowercase)
+  assetId: String!    # bytes32 id from registry
+  registryAddress: String!
+  owner: String!
+}
+
+type Subscription {
+  id: ID!             # `${assetAddress}_${user}`
+  asset_id: String!   # references AssetEntity.id
+  user: String!
+  expiresAt: BigInt!
+  isActive: Boolean!
+}
+
+type AssetIdToAddress {
+  id: ID!             # assetId (bytes32 as hex string)
+  assetAddress: String!
+}
+
 

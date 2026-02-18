@@ -4,32 +4,37 @@ description: Indexer for AssetContract registry and Asset subscriptions
 
 # Global contract definitions (no addresses here)
 contracts:
-  - name: AssetContract
-    abi_file_path: ./abis/AssetContract.json
+  - name: AssetRegistry
+    abi_file_path: ./abis/AssetRegistry.json
     handler: ./src/EventHandlers.ts
     events:
-      - event: AssetCreated(bytes32 indexed assetId, address indexed asset)
-      - event: AssetRemoved(bytes32 indexed assetId)
+      - event: AssetCreated(bytes32 indexed assetId, address indexed asset, uint256 subscriptionPrice, address tokenAddress, address indexed owner)
       - event: OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+      - event: CreatorFeeShareUpdated(uint256 newCreatorFeeShare)
+      - event: RegistryFeeShareUpdated(uint256 newRegistryFeeShare)
 
   - name: Asset
     abi_file_path: ./abis/Asset.json
     handler: ./src/EventHandlers.ts
     events:
       - event: SubscriptionAdded(address indexed user, uint256 expiresAt)
+      - event: SubscriptionPriceUpdated(uint256 newSubscriptionPrice)
       - event: SubscriptionRevoked(address indexed user)
       - event: OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 
 networks:
-  - id: 1
+  # For local testing, see readme
+  - id: 31337 # Anvil local network
     start_block: 0
+    rpc_config:
+      url: http://127.0.0.1:8545 # Anvil local network
     contracts:
-      - name: AssetContract
+      - name: AssetRegistry
         address:
-          - "0x0000000000000000000000000000000000000000"
+          - "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0" # fill with local AssetRegistry address
       - name: Asset
         address:
-          - "0x0000000000000000000000000000000000000000"
+          - "0x75537828f2ce51be7289709686a69cbfdbb714f1" # fill with local Asset address
 
 unordered_multichain_mode: true
 preload_handlers: true
