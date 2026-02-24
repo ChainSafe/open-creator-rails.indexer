@@ -26,7 +26,7 @@ networks:
   - id: 11155111
     start_block: 10299077
     rpc_config:
-      url: https://rpc.sepolia.org
+      url: https://gateway.tenderly.co/public/sepolia
     contracts:
       - name: AssetRegistry
         address:
