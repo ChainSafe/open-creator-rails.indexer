@@ -2,7 +2,6 @@
 name: ocr-indexer
 description: Indexer for AssetContract registry and Asset subscriptions
 
-# Global contract definitions (no addresses here)
 contracts:
   - name: AssetRegistry
     abi_file_path: ./abis/AssetRegistry.json
@@ -23,18 +22,31 @@ contracts:
       - event: OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 
 networks:
-  # For local testing, see readme
-  - id: 31337 # Anvil local network
-    start_block: 0
+  # Sepolia
+  - id: 11155111
+    start_block: 10299077
     rpc_config:
-      url: http://127.0.0.1:8545 # Anvil local network
+      url: https://rpc.sepolia.org
     contracts:
       - name: AssetRegistry
         address:
-          - "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0" # fill with local AssetRegistry address
+          - "0x93759d1Db2587FE353e010E8cF90a22377AE9E3b" 
       - name: Asset
         address:
-          - "0x75537828f2ce51be7289709686a69cbfdbb714f1" # fill with local Asset address
+          - "0x31c2823a3D9Bed91F5ae62F3F3D674A0Bf36b795"
+
+  # For local testing, see readme
+  # - id: 31337 # Anvil local network
+  #   start_block: 0
+  #   rpc_config:
+  #     url: http://127.0.0.1:8545 # Anvil local network
+  #   contracts:
+  #     - name: AssetRegistry
+  #       address:
+  #         - "0x0000000000000000000000000000000000000000" # fill with local AssetRegistry address
+  #     - name: Asset
+  #       address:
+  #         - "0x0000000000000000000000000000000000000000" # fill with local Asset address
 
 unordered_multichain_mode: true
 preload_handlers: true
