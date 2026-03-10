@@ -59,6 +59,11 @@ AssetRegistry.AssetCreated.handler(async ({ event, context }) => {
   context.AssetIdToAddress.set(mapping);
 });
 
+AssetRegistry.AssetCreated.contractRegister(async ({ event, context }) => {
+  const assetAddress = event.params.asset.toLowerCase();
+  context.addAsset(assetAddress)
+});
+
 AssetRegistry.OwnershipTransferred.handler(async ({ event, context }) => {
   const entity: AssetContract_OwnershipTransferred = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
