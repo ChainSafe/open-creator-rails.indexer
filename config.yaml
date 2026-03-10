@@ -32,15 +32,6 @@ networks:
         address:
           - "0x513972072Ae1985506e2FC3b3d9A46fe0F0eCDB5" 
       - name: Asset
-        # address:
-        #   - "0xca6f6d53ec05bbfd0a1888b777ea729549f66454"
-        #   - "0xcdd88d9f65a79de88b512dd72276620ea0641aad"
-        #   - "0xffb9bf5c3e811288c5b63acffaa8fd9a0f705227"
-        #   - "0xc01ca58aebdf0ae085b9f229dc4b25d4386e3504"
-        #   - "0x427a32acc5a1ebf3956df80d454c1184814170cf"
-        #   - "0x043887c55b378bead8cda17b1498fca5146f7e2e"
-        #   - "0x5b0c3f7c3bd95efdbf913c50be935c9ab969fcd1"
-        #   - "0x827a062637c52be85c3e7b79fd171d3ac21b9bad"
 
   # For local testing, see readme
   # - id: 31337 # Anvil local network

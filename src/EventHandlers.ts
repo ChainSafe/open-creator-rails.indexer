@@ -61,7 +61,7 @@ AssetRegistry.AssetCreated.handler(async ({ event, context }) => {
 
 AssetRegistry.AssetCreated.contractRegister(async ({ event, context }) => {
   const assetAddress = event.params.asset.toLowerCase();
-  context.addAsset(assetAddress)
+  context.addAsset(assetAddress);
 });
 
 AssetRegistry.OwnershipTransferred.handler(async ({ event, context }) => {
