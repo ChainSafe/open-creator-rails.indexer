@@ -42,6 +42,7 @@ ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
     subscriptionPrice: event.args.subscriptionPrice,
     tokenAddress: tokenAddress,
     owner: owner,
+    registryAddress: event.log.address,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -52,6 +53,7 @@ ponder.on("AssetRegistry:OwnershipTransferred", async ({ event, context }) => {
     id: getEventId(event),
     previousOwner: event.args.previousOwner.toLowerCase(),
     newOwner: event.args.newOwner.toLowerCase(),
+    registryAddress: event.log.address,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -61,6 +63,7 @@ ponder.on("AssetRegistry:CreatorFeeShareUpdated", async ({ event, context }) => 
   await context.db.insert(AssetRegistry_CreatorFeeShareUpdated).values({
     id: getEventId(event),
     newCreatorFeeShare: event.args.newCreatorFeeShare,
+    registryAddress: event.log.address,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -70,6 +73,7 @@ ponder.on("AssetRegistry:RegistryFeeShareUpdated", async ({ event, context }) =>
   await context.db.insert(AssetRegistry_RegistryFeeShareUpdated).values({
     id: getEventId(event),
     newRegistryFeeShare: event.args.newRegistryFeeShare,
+    registryAddress: event.log.address,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -140,10 +144,18 @@ ponder.on("Asset:OwnershipTransferred", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase();
   const newOwner = event.args.newOwner.toLowerCase();
 
-  // 1. Update the mutable Asset Entity
-  await context.db.update(AssetEntity, { id: assetAddress }).set({
-    owner: newOwner,
-  });
+  // 1. Update the mutable Asset Entity (if exists)
+  try {
+    await context.db.update(AssetEntity, { id: assetAddress }).set({
+      owner: newOwner,
+    });
+  } catch (e: any) {
+    // If the AssetEntity doesn't exist (e.g., event emitted in constructor before registry created it), skip update.
+    // The AssetCreated event will set the correct initial state.
+    if (!e.message?.includes('No existing record found')) {
+      throw e;
+    }
+  }
 
   // 2. Log History
   await context.db.insert(Asset_OwnershipTransferred).values({
