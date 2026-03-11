@@ -1,4 +1,4 @@
-import { Abi, AbiEvent, parseAbiItem, getAbiItem  } from "viem";
+import { getAbiItem  } from "viem";
 import { createConfig, factory } from "ponder";
 
 import { AssetRegistryAbi } from "./abis/AssetRegistryABI";

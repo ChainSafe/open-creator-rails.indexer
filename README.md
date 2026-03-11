@@ -1,6 +1,6 @@
 # OCR Indexer Monorepo
 
-This repository contains indexer implementations for the OCR (Open Creator Rails) protocol on the Canton network.
+This repository contains indexer implementations for the OCR (Open Creator Rails) protocol on the Ethereum network.
 
 The project is structured as a monorepo with multiple indexer implementations to support different tech stacks and requirements.
 

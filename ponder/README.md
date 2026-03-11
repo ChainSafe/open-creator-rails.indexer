@@ -34,10 +34,10 @@ The entities are defined in `ponder.schema.ts` and mirror the original Envio imp
 
 - **Event entities**  
   These mirror contract events for history and debugging:
-  - `AssetContract_AssetCreated`
-  - `AssetContract_OwnershipTransferred`
-  - `AssetContract_CreatorFeeShareUpdated`
-  - `AssetContract_RegistryFeeShareUpdated`
+  - `AssetRegistry_AssetCreated`
+  - `AssetRegistry_OwnershipTransferred`
+  - `AssetRegistry_CreatorFeeShareUpdated`
+  - `AssetRegistry_RegistryFeeShareUpdated`
   - `Asset_SubscriptionAdded`
   - `Asset_SubscriptionPriceUpdated`
   - `Asset_SubscriptionRevoked`

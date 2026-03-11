@@ -137,11 +137,20 @@ ponder.on("Asset:SubscriptionPriceUpdated", async ({ event, context }) => {
 });
 
 ponder.on("Asset:OwnershipTransferred", async ({ event, context }) => {
+  const assetAddress = event.log.address.toLowerCase();
+  const newOwner = event.args.newOwner.toLowerCase();
+
+  // 1. Update the mutable Asset Entity
+  await context.db.update(AssetEntity, { id: assetAddress }).set({
+    owner: newOwner,
+  });
+
+  // 2. Log History
   await context.db.insert(Asset_OwnershipTransferred).values({
     id: getEventId(event),
     previousOwner: event.args.previousOwner.toLowerCase(),
-    newOwner: event.args.newOwner.toLowerCase(),
-    assetAddress: event.log.address.toLowerCase(),
+    newOwner: newOwner,
+    assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
