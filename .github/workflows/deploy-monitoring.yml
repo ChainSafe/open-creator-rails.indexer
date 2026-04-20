@@ -1,0 +1,87 @@
+name: Deploy Monitoring
+
+# =============================================================================
+# Deploys the Prometheus + Grafana monitoring stack to Railway.
+#
+# Required GitHub secrets:
+#   RAILWAY_API_TOKEN                — Railway API token
+#   RAILWAY_PROJECT_ID               — Railway project UUID
+#   RAILWAY_PROMETHEUS_SERVICE_ID    — Railway service UUID for Prometheus
+#   RAILWAY_GRAFANA_SERVICE_ID       — Railway service UUID for Grafana
+#
+# Required Railway env vars (set once in Railway dashboard):
+#   On the Grafana service:
+#     GF_SECURITY_ADMIN_USER         — admin username
+#     GF_SECURITY_ADMIN_PASSWORD     — admin password
+#     GF_USERS_ALLOW_SIGN_UP         — false
+#     GF_SERVER_ROOT_URL             — https://<your-grafana-railway-url>
+#     GF_PROMETHEUS_URL              — http://prometheus.railway.internal:9090
+# =============================================================================
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "monitoring/**"
+  workflow_dispatch:
+
+env:
+  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+  PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+  PROMETHEUS_SERVICE_ID: ${{ secrets.RAILWAY_PROMETHEUS_SERVICE_ID }}
+  GRAFANA_SERVICE_ID: ${{ secrets.RAILWAY_GRAFANA_SERVICE_ID }}
+
+jobs:
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ----------------------------------------------------------------
+      # 1. Checkout
+      # ----------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------------------
+      # 2. Install Railway CLI
+      # ----------------------------------------------------------------
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # ----------------------------------------------------------------
+      # 3. Deploy Prometheus
+      # ----------------------------------------------------------------
+      - name: Deploy Prometheus
+        working-directory: monitoring/prometheus
+        run: |
+          railway link --project "$PROJECT_ID" --environment production
+          railway up --service "$PROMETHEUS_SERVICE_ID" --detach
+          echo "🟡 Prometheus deployment triggered"
+
+      # ----------------------------------------------------------------
+      # 4. Deploy Grafana
+      # ----------------------------------------------------------------
+      - name: Deploy Grafana
+        working-directory: monitoring/grafana
+        run: |
+          railway link --project "$PROJECT_ID" --environment production
+          railway up --service "$GRAFANA_SERVICE_ID" --detach
+          echo "📊 Grafana deployment triggered"
+
+      # ----------------------------------------------------------------
+      # 5. Summary
+      # ----------------------------------------------------------------
+      - name: Summary
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  ✅ Monitoring stack deployed"
+          echo "  SHA: ${GITHUB_SHA::8}"
+          echo ""
+          echo "  Next steps (first deploy only):"
+          echo "  1. Enable private networking in Railway project settings"
+          echo "  2. Verify Prometheus targets at your Prometheus /targets page"
+          echo "  3. Open Grafana → Ponder Indexer dashboard"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
