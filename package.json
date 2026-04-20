@@ -5,7 +5,7 @@
   "scripts": {
     "setup": "pnpm install && pnpm contracts:build && pnpm sync",
     "dev": "ponder dev",
-    "dev:local": "concurrently \"anvil\" \"cd open-creator-rails && bash scripts/seed-local.sh\" \"sleep 6 && PONDER_RPC_URL_31337=http://127.0.0.1:8545 pnpm dev\"",
+    "dev:local": "bash scripts/dev-local.sh",
     "start": "ponder start",
     "db": "ponder db",
     "codegen": "ponder codegen",
