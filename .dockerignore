@@ -1,0 +1,17 @@
+# Git
+.git/
+.gitmodules
+
+# Contracts submodule — ABIs are pre-synced into config/, not needed at build time
+open-creator-rails/
+
+# Ponder local state
+.ponder/
+
+# Dependencies (reinstalled during build)
+node_modules/
+
+# Dev / tooling
+.env*
+scripts/dev-local.sh
+monitoring/
