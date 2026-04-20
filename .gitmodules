@@ -1,0 +1,3 @@
+[submodule "open-creator-rails"]
+	path = open-creator-rails
+	url = https://github.com/ChainSafe/open-creator-rails.git

@@ -1,0 +1,41 @@
+name: ABI Sync Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "open-creator-rails/apps/contracts/src/**"
+      - "config/AssetABI.ts"
+      - "config/AssetRegistryABI.ts"
+      - "scripts/sync-abis.js"
+
+jobs:
+  abi-sync:
+    name: Check ABIs are in sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts
+        run: pnpm contracts:build
+
+      - name: Sync ABIs
+        run: node scripts/sync-abis.js
+
+      - name: Check for drift
+        run: |
+          if ! git diff --exit-code config/AssetABI.ts config/AssetRegistryABI.ts; then
+            echo ""
+            echo "❌ ABI files are out of sync with contracts."
+            echo ""
+            echo "Run this locally and commit the result:"
+            echo "  pnpm contracts:build && pnpm sync"
+            exit 1
+          fi
+          echo "✅ ABIs are in sync."
