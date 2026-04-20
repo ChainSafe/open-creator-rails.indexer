@@ -7,9 +7,9 @@ export const getRegistryEntityId = (chainId: number, registryAddress: string) =>
 };
 
 export const getAssetEntityId = (chainId: number, assetAddress: string) => {
-  return `${chainId}_${assetAddress}`;
+  return `${chainId}_${assetAddress.toLowerCase()}`;
 };
 
 export const getSubscriptionId = (chainId: number, assetAddress: string, subscriber: string) => {
-  return `${chainId}_${assetAddress}_${subscriber}`;
+  return `${chainId}_${assetAddress.toLowerCase()}_${subscriber}`;
 };
