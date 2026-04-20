@@ -121,7 +121,6 @@ The indexer exposes two endpoints:
 |---|---|
 | `GET /` | GraphQL playground (browser UI) |
 | `POST /graphql` | GraphQL API |
-| `GET /sql/*` | Direct SQL queries via Ponder's SQL endpoint |
 | `GET /ready` | Health check — returns `200` when live |
 
 ### GraphQL
@@ -190,14 +189,6 @@ Ponder generates a singular (fetch by ID) and plural (list) field for each table
   }
 }
 ```
-
-### SQL
-
-```bash
-curl "http://localhost:42069/sql/SELECT%20*%20FROM%20ocr_indexer.subscription%20WHERE%20is_active%20%3D%20true%20LIMIT%2010"
-```
-
-Table names are the snake_case equivalents of the schema (e.g. `ocr_indexer.asset_entity`, `ocr_indexer.subscription`).
 
 > **Notes:**
 > - All `BigInt` values are returned as strings to avoid JavaScript integer overflow
