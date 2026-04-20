@@ -20,7 +20,7 @@ name: Deploy Monitoring
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - "monitoring/**"
   workflow_dispatch:

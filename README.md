@@ -1,137 +1,235 @@
-# ocr-indexer-ponder
+# ocr-indexer
 
 A [Ponder](https://ponder.sh) indexer for the OCR (Open Creator Rails) protocol.
 
-The project is structured as a monorepo with multiple indexer implementations to support different tech stacks and requirements.
+This indexer tracks:
 
-## Directory Structure
+- **AssetRegistry**: deployment and configuration of `Asset` contracts.
+- **Asset**: subscription-gated assets and their subscribers.
 
-### 1. [ponder](./ponder)
-**Framework:** [Ponder](https://ponder.sh)  
+It exposes convenient entities to answer questions like:
 
-The primary indexer moving forward. Ponder offers improved developer experience, strict TypeScript typing, and a simpler deployment model (Node.js runtime).
+- Which assets exist and who owns them?
+- Which assets is a user subscribed to?
+- Which users are subscribed to a given asset?
 
-## Data model
+## Prerequisites
 
-The entities are defined in `ponder.schema.ts` and mirror the original Envio implementation.
+- **Node.js** v18+
+- **pnpm** v8+
+- **Foundry** (for local development) — install via `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 
-### 2. [envio](./envio)
-**Framework:** [Envio](https://envio.dev)
+## Setup
 
-- **`Subscription`**  
-  One row per `(asset, user)` pair, representing their **current contiguous active state**.
-  - `id`: `${assetAddress}_${user}` (both lowercased).
-  - `assetId`: foreign key to `AssetEntity.id`.
-  - `user`: subscriber address (lowercased).
-  - `startTime`: The initial start time of their unbroken subscription block (BigInt).
-  - `endTime`: The final expiry timestamp of their subscription block (BigInt).
-  - `nonce`: The latest subscription iteration counter for that user.
-  - `isActive`: whether the subscription is currently active (forced false if revoked).
+Clone with submodules (the `open-creator-rails` repo is included as a submodule for ABI generation):
 
-  > **Note on Subscription Time Tracking**: When a user tops up an actively running subscription, the smart contract seamlessly extends their access by setting the new event's `startTime` equal to the old `endTime`. The indexer handles this cleanly: it identifies if `existingSub.endTime === event.args.startTime` and conditionally stitches the time blocks together. This way, the mutable `Subscription` table always elegantly presents a user's *continuous* timeline of access (maintaining their ancient `startTime`), whereas the historical `Asset_SubscriptionAdded` log table tracks the isolated iterations individually via nonces.
+```bash
+git clone --recurse-submodules https://github.com/ChainSafe/ocr-indexer.git
+cd ocr-indexer
+pnpm setup   # installs deps, builds contracts, syncs ABIs
+```
 
-- **Event entities**  
-  These mirror contract events for history and debugging:
-  - `AssetRegistry_AssetCreated`
-  - `AssetRegistry_OwnershipTransferred`
-  - `AssetRegistry_CreatorFeeShareUpdated`
-  - `AssetRegistry_RegistryFeeShareUpdated`
-  - `Asset_SubscriptionAdded`
-  - `Asset_SubscriptionPriceUpdated`
-  - `Asset_SubscriptionRevoked`
-  - `Asset_OwnershipTransferred`
+If you already cloned without `--recurse-submodules`:
 
-## GraphQL API
+```bash
+git submodule update --init --recursive
+pnpm setup
+```
 
-All GraphQL types and fields are automatically generated from `ponder.schema.ts`.
-After running `pnpm dev`, open the Playground at `http://localhost:42069`.
+## Local Development
 
-> **⚠️ Addresses are lowercased.** All address fields (`id`, `owner`, `registryAddress`, `payer`, `asset`, etc.) are stored in **lowercase**. If you query with a checksummed (mixed-case) address you will get no results. Lowercase the address on the client before querying:
->
+```bash
+pnpm dev:local
+```
+
+This starts three things in sequence:
+1. **Anvil** — local EVM node
+2. **Seed** — deploys registry, test token, and sample assets/subscriptions
+3. **Ponder** — starts the indexer pointed at local Anvil (`PONDER_RPC_URL_31337`)
+
+The API will be available at `http://localhost:42069`.
+
+To index against Sepolia instead, set `PONDER_RPC_URL_11155111` in `.env.local` and run:
+
+```bash
+pnpm dev
+```
+
+## Scripts
+
+| Script | Description |
+|---|---|
+| `pnpm setup` | Install deps, build contracts, sync ABIs — run once after cloning |
+| `pnpm dev` | Start Ponder in dev mode (live reload) |
+| `pnpm dev:local` | Start Anvil + seed + Ponder for local development |
+| `pnpm start` | Start Ponder in production mode |
+| `pnpm contracts:build` | Run `forge build` inside the `open-creator-rails` submodule |
+| `pnpm sync` | Extract ABIs from Foundry build output into `config/` |
+| `pnpm codegen` | Regenerate Ponder types from schema and config |
+| `pnpm typecheck` | TypeScript type check |
+| `pnpm lint` | ESLint |
+
+## ABI Sync
+
+ABIs live in `config/` and are generated from the contracts in the `open-creator-rails` submodule. To update after contract changes:
+
+```bash
+git submodule update --remote open-creator-rails
+pnpm contracts:build
+pnpm sync
+```
+
+The `abi-sync-check` CI workflow enforces that `config/AssetABI.ts` and `config/AssetRegistryABI.ts` are always in sync with the submodule.
+
+## Environment Variables
+
+| Variable | Chain | Description |
+|---|---|---|
+| `PONDER_RPC_URL_31337` | Local (Anvil) | Anvil RPC URL. Enables local chain indexing. |
+| `PONDER_RPC_URL_11155111` | Sepolia | Sepolia RPC URL. Enables Sepolia indexing. |
+| `DATABASE_URL` | — | Postgres connection string. Dev mode uses PGlite (in-process) by default. |
+
+Both RPC URLs can be set simultaneously to index multiple chains at once.
+
+## Docker
+
+```bash
+docker compose up --build        # start the full stack
+docker compose down              # stop
+docker compose down -v           # stop and remove volumes (full reset)
+```
+
+Requires `PONDER_RPC_URL_11155111` to be set in your shell or in `.env`.
+
+The stack runs five services:
+
+| Service | Port | Description |
+|---|---|---|
+| `worker` | 42070 | Ponder indexer — backfills and live-indexes chain data |
+| `api` | 42069 | Ponder API server — serves GraphQL/REST from the views schema |
+| `postgres` | 5432 | Shared database |
+| `prometheus` | 9090 | Scrapes Ponder metrics from worker and API |
+| `grafana` | 3000 | Dashboards for sync lag, API latency, and errors |
+
+Grafana is available at `http://localhost:3000` (default credentials: `admin` / `admin`).
+
+## API
+
+The indexer exposes two endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /` | GraphQL playground (browser UI) |
+| `POST /graphql` | GraphQL API |
+| `GET /ready` | Health check — returns `200` when live |
+
+### GraphQL
+
+Open the playground at `http://localhost:42069` after starting the indexer.
+
+Ponder generates a singular (fetch by ID) and plural (list) field for each table:
+
+| Singular | Plural | Description |
+|---|---|---|
+| `assetEntity` | `assetEntitys` | Asset contract state |
+| `subscription` | `subscriptions` | Subscription state per asset–subscriber |
+| `assetRegistry_AssetCreated` | `assetRegistry_AssetCreateds` | Asset creation events |
+| `assetRegistry_RegistryFeeShareUpdated` | `assetRegistry_RegistryFeeShareUpdateds` | Registry fee share updates |
+| `assetRegistry_RegistryFeeClaimedBatch` | `assetRegistry_RegistryFeeClaimedBatchs` | Registry fee claim batches |
+| `asset_SubscriptionAdded` | `asset_SubscriptionAddeds` | New subscription events |
+| `asset_SubscriptionExtended` | `asset_SubscriptionExtendeds` | Subscription extension events |
+| `asset_SubscriptionRevoked` | `asset_SubscriptionRevokeds` | Subscription revocation events |
+| `asset_SubscriptionCancelled` | `asset_SubscriptionCancelleds` | Subscription cancellation events |
+| `asset_SubscriptionPriceUpdated` | `asset_SubscriptionPriceUpdateds` | Price update events |
+| `asset_CreatorFeeClaimed` | `asset_CreatorFeeClaimeds` | Creator fee claim events |
+| `asset_OwnershipTransferred` | `asset_OwnershipTransferreds` | Asset ownership transfer events |
+
+> **⚠️ Addresses are lowercased.** All address fields are stored in lowercase. Lowercase your address before querying:
 > ```ts
 > const address = walletAddress.toLowerCase();
 > ```
 
-## Running the indexer
-
-### Development
-
-**For Ponder:**
-```bash
-cd ponder
-pnpm install
-pnpm dev
-# GraphQL available at http://localhost:42069
+**Fetch all assets by owner:**
+```graphql
+{
+  assetEntitys(where: { owner: "0xYourAddress" }) {
+    items {
+      id
+      assetId
+      address
+      chainId
+    }
+  }
+}
 ```
 
-This will:
-- Start the Ponder development server.
-- Automatically reload on file changes.
-- Expose GraphQL at `http://localhost:42069`.
-
-This runs the optimized production build.
-
-### Helper Commands
-
-- **`pnpm codegen`**: Regenerates the Ponder types from the schema and config.
-- **`pnpm typecheck`**: Runs the TypeScript compiler to check for type errors.
-
-## Configuration
-
-The indexer is configured in `ponder.config.ts`. This file defines the networks, contracts, and ABI locations.
-
-To change the network or contract addresses, edit `ponder.config.ts`.
-
-## Local Development (Anvil)
-
-The indexer uses the Ponder convention of `PONDER_RPC_URL_<chainId>` environment variables to decide which chains to index. To run against a local Anvil node, create an `.env.local` file inside the indexer directory:
-
-```bash
-# apps/indexer/.env.local
-
-# Anvil's default JSON-RPC endpoint (chain ID 31337)
-PONDER_RPC_URL_31337=http://127.0.0.1:8545
+**Check active subscriptions for a subscriber:**
+```graphql
+{
+  subscriptions(where: { subscriber: "0x...", isActive: true }) {
+    items {
+      assetId
+      startTime
+      endTime
+      payer
+    }
+  }
+}
 ```
 
-> Ponder automatically loads `.env.local` in dev mode — no extra configuration needed.
-
-### Quick start
-
-From the monorepo root:
-
-```bash
-pnpm setup        # first time only — build contracts + sync ABIs
-pnpm dev:local    # starts Anvil, seeds contracts, and launches the indexer
+**Pagination:**
+```graphql
+{
+  subscriptions(limit: 20, after: "cursor_from_previous_response") {
+    items { ... }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
 ```
 
-`dev:local` starts Anvil, runs `seed-local.sh` (deploys registry, token, and sample assets), and launches the indexer concurrently. The RPC URL is passed inline so `.env.local` is not required for this path.
+> **Notes:**
+> - All `BigInt` values are returned as strings to avoid JavaScript integer overflow
+> - All addresses are lowercase hex strings
+> - `blockTimestamp` is a Unix timestamp in seconds
 
-The GraphQL playground will be available at `http://localhost:42069`.
+---
 
-### Docker
+## Data Model
 
-The root `package.json` also provides Docker-based scripts that run the indexer with Postgres (useful for testing production-like setups):
+Defined in `ponder.schema.ts`.
 
-```bash
-pnpm indexer:docker        # build and start the stack (Postgres + worker + API)
-pnpm indexer:docker:down   # stop all containers
-pnpm indexer:docker:reset  # stop and remove volumes (full reset)
-```
+### `AssetEntity`
+One row per deployed `Asset` contract.
+- `id`: asset contract address (lowercased).
+- `assetId`: bytes32 id in the registry.
+- `registryAddress`: address of the `AssetRegistry` that created it.
+- `owner`: current `Asset` owner (creator or transferee), always lowercased.
 
-> The Docker Compose file lives at `apps/indexer/docker-compose.yaml`. It requires `PONDER_RPC_URL_11155111` to be set in your shell or in `apps/indexer/.env`.
+### `Subscription`
+One row per `(asset, subscriber)` pair representing their **current contiguous active state**.
+- `id`: `${assetAddress}_${subscriber}` (both lowercased).
+- `assetId`: foreign key to `AssetEntity.id`.
+- `user`: subscriber address (lowercased).
+- `startTime`: start of the unbroken subscription block (BigInt).
+- `endTime`: final expiry timestamp (BigInt).
+- `nonce`: latest subscription iteration counter.
+- `isActive`: false if revoked.
 
-### Environment variable reference
+> When a user tops up an active subscription, the contract sets the new event's `startTime` equal to the old `endTime`. The indexer stitches these together so `Subscription` always reflects the continuous timeline, while the `Asset_SubscriptionAdded` log table tracks each iteration individually via nonces.
 
-| Variable | Chain | Description |
-|---|---|---|
-| `PONDER_RPC_URL_31337` | Local (Anvil) | Anvil RPC URL. Set this to enable local chain indexing. |
-| `PONDER_RPC_URL_11155111` | Sepolia | Sepolia RPC URL. Set this to enable Sepolia indexing. |
-| `DATABASE_URL` | — | Postgres connection string. Only needed for production; dev mode uses PGlite (in-memory) by default. |
-
-> **Tip:** You can set both `PONDER_RPC_URL_31337` and `PONDER_RPC_URL_11155111` at the same time to index multiple chains simultaneously.
-
-## Prerequisites
-
-- **Node.js**: v18+ (tested with v20).
-- **pnpm**: v8 or newer.
-- **PostgreSQL**: Required for production; Ponder uses Pglite (in-memory Postgres) for development by default, or you can configure `DATABASE_URL`.
+### Event log tables
+Raw event history for debugging and analytics:
+- `AssetRegistry_AssetCreated`
+- `AssetRegistry_OwnershipTransferred`
+- `AssetRegistry_RegistryFeeShareUpdated`
+- `AssetRegistry_RegistryFeeClaimedBatch`
+- `Asset_SubscriptionAdded`
+- `Asset_SubscriptionExtended`
+- `Asset_SubscriptionPriceUpdated`
+- `Asset_SubscriptionRevoked`
+- `Asset_SubscriptionCancelled`
+- `Asset_CreatorFeeClaimed`
+- `Asset_OwnershipTransferred`

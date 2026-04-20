@@ -1,3 +1,5 @@
 {
-  "extends": "ponder"
+  "root": true,
+  "extends": "ponder",
+  "ignorePatterns": ["open-creator-rails/"]
 }
