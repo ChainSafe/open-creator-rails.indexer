@@ -39,17 +39,6 @@ export const AssetEntity = onchainTable("asset_entity", (t) => ({
   assetIdIdx: index().on(table.assetId),
 }));
 
-export const registryEntityRelations = relations(RegistryEntity, ({ many }) => ({
-  assets: many(AssetEntity),
-}));
-
-export const assetEntityRelations = relations(AssetEntity, ({ one }) => ({
-  registry: one(RegistryEntity, {
-    fields: [AssetEntity.registryId],
-    references: [RegistryEntity.id],
-  }),
-}));
-
 // Tracks the current state of a subscriber's subscription to an asset.
 // One row per asset–subscriber pair (not per nonce). When terms change mid-subscription
 // (price, payer, fee share), the contract creates a new nonce but the indexer preserves
@@ -70,6 +59,27 @@ export const Subscription = onchainTable("subscription", (t) => ({
   assetIdIdx: index().on(table.assetId),
   subscriberIdx: index().on(table.subscriber),
   payerIdx: index().on(table.payer),
+}));
+
+// --- Relations ---
+
+export const registryEntityRelations = relations(RegistryEntity, ({ many }) => ({
+  assets: many(AssetEntity),
+}));
+
+export const assetEntityRelations = relations(AssetEntity, ({ one, many }) => ({
+  registry: one(RegistryEntity, {
+    fields: [AssetEntity.registryId],
+    references: [RegistryEntity.id],
+  }),
+  subscriptions: many(Subscription),
+}));
+
+export const subscriptionRelations = relations(Subscription, ({ one }) => ({
+  asset: one(AssetEntity, {
+    fields: [Subscription.assetId],
+    references: [AssetEntity.id],
+  }),
 }));
 
 // --- Events (Immutable History) ---
