@@ -23,7 +23,7 @@ name: Deploy Indexer
 on:
   push:
     tags:
-      - "indexer@v*"
+      - "v*"
   workflow_dispatch:
     inputs:
       mode:
