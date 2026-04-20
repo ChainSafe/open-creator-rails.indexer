@@ -20,8 +20,8 @@ services:
   # 2. Worker — indexes chain data and creates/updates views when caught up
   worker:
     build:
-      context: ../..  # monorepo root (workspace deps live here)
-      dockerfile: apps/indexer/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: ocr_indexer_worker
     ports:
       - "42070:42070"  # worker HTTP (for health checks)
@@ -52,8 +52,8 @@ services:
   #    After that: always up, independent of worker lifecycle.
   api:
     build:
-      context: ../..
-      dockerfile: apps/indexer/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: ocr_indexer_api
     ports:
       - "42069:42069"  # public GraphQL endpoint

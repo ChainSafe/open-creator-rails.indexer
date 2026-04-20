@@ -1,6 +1,17 @@
 # ocr-indexer
 
-A [Ponder](https://ponder.sh) indexer for the OCR (Open Creator Rails) protocol. Indexes `AssetRegistry` and `Asset` contract events and exposes them over a REST/GraphQL API.
+A [Ponder](https://ponder.sh) indexer for the OCR (Open Creator Rails) protocol.
+
+This indexer tracks:
+
+- **AssetRegistry**: deployment and configuration of `Asset` contracts.
+- **Asset**: subscription-gated assets and their subscribers.
+
+It exposes convenient entities to answer questions like:
+
+- Which assets exist and who owns them?
+- Which assets is a user subscribed to?
+- Which users are subscribed to a given asset?
 
 ## Prerequisites
 
@@ -83,12 +94,117 @@ Both RPC URLs can be set simultaneously to index multiple chains at once.
 ## Docker
 
 ```bash
-docker compose up --build        # start Postgres + worker + API
+docker compose up --build        # start the full stack
 docker compose down              # stop
 docker compose down -v           # stop and remove volumes (full reset)
 ```
 
 Requires `PONDER_RPC_URL_11155111` to be set in your shell or in `.env`.
+
+The stack runs five services:
+
+| Service | Port | Description |
+|---|---|---|
+| `worker` | 42070 | Ponder indexer — backfills and live-indexes chain data |
+| `api` | 42069 | Ponder API server — serves GraphQL/REST from the views schema |
+| `postgres` | 5432 | Shared database |
+| `prometheus` | 9090 | Scrapes Ponder metrics from worker and API |
+| `grafana` | 3000 | Dashboards for sync lag, API latency, and errors |
+
+Grafana is available at `http://localhost:3000` (default credentials: `admin` / `admin`).
+
+## API
+
+The indexer exposes two endpoints:
+
+| Endpoint | Description |
+|---|---|
+| `GET /` | GraphQL playground (browser UI) |
+| `POST /graphql` | GraphQL API |
+| `GET /sql/*` | Direct SQL queries via Ponder's SQL endpoint |
+| `GET /ready` | Health check — returns `200` when live |
+
+### GraphQL
+
+Open the playground at `http://localhost:42069` after starting the indexer.
+
+Ponder generates a singular (fetch by ID) and plural (list) field for each table:
+
+| Singular | Plural | Description |
+|---|---|---|
+| `assetEntity` | `assetEntitys` | Asset contract state |
+| `subscription` | `subscriptions` | Subscription state per asset–subscriber |
+| `assetRegistry_AssetCreated` | `assetRegistry_AssetCreateds` | Asset creation events |
+| `assetRegistry_RegistryFeeShareUpdated` | `assetRegistry_RegistryFeeShareUpdateds` | Registry fee share updates |
+| `assetRegistry_RegistryFeeClaimedBatch` | `assetRegistry_RegistryFeeClaimedBatchs` | Registry fee claim batches |
+| `asset_SubscriptionAdded` | `asset_SubscriptionAddeds` | New subscription events |
+| `asset_SubscriptionExtended` | `asset_SubscriptionExtendeds` | Subscription extension events |
+| `asset_SubscriptionRevoked` | `asset_SubscriptionRevokeds` | Subscription revocation events |
+| `asset_SubscriptionCancelled` | `asset_SubscriptionCancelleds` | Subscription cancellation events |
+| `asset_SubscriptionPriceUpdated` | `asset_SubscriptionPriceUpdateds` | Price update events |
+| `asset_CreatorFeeClaimed` | `asset_CreatorFeeClaimeds` | Creator fee claim events |
+| `asset_OwnershipTransferred` | `asset_OwnershipTransferreds` | Asset ownership transfer events |
+
+> **⚠️ Addresses are lowercased.** All address fields are stored in lowercase. Lowercase your address before querying:
+> ```ts
+> const address = walletAddress.toLowerCase();
+> ```
+
+**Fetch all assets by owner:**
+```graphql
+{
+  assetEntitys(where: { owner: "0xYourAddress" }) {
+    items {
+      id
+      assetId
+      address
+      chainId
+    }
+  }
+}
+```
+
+**Check active subscriptions for a subscriber:**
+```graphql
+{
+  subscriptions(where: { subscriber: "0x...", isActive: true }) {
+    items {
+      assetId
+      startTime
+      endTime
+      payer
+    }
+  }
+}
+```
+
+**Pagination:**
+```graphql
+{
+  subscriptions(limit: 20, after: "cursor_from_previous_response") {
+    items { ... }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+```
+
+### SQL
+
+```bash
+curl "http://localhost:42069/sql/SELECT%20*%20FROM%20ocr_indexer.subscription%20WHERE%20is_active%20%3D%20true%20LIMIT%2010"
+```
+
+Table names are the snake_case equivalents of the schema (e.g. `ocr_indexer.asset_entity`, `ocr_indexer.subscription`).
+
+> **Notes:**
+> - All `BigInt` values are returned as strings to avoid JavaScript integer overflow
+> - All addresses are lowercase hex strings
+> - `blockTimestamp` is a Unix timestamp in seconds
+
+---
 
 ## Data Model
 
@@ -96,16 +212,22 @@ Defined in `ponder.schema.ts`.
 
 ### `AssetEntity`
 One row per deployed `Asset` contract.
+- `id`: asset contract address (lowercased).
+- `assetId`: bytes32 id in the registry.
+- `registryAddress`: address of the `AssetRegistry` that created it.
+- `owner`: current `Asset` owner (creator or transferee), always lowercased.
 
 ### `Subscription`
 One row per `(asset, subscriber)` pair representing their **current contiguous active state**.
+- `id`: `${assetAddress}_${subscriber}` (both lowercased).
+- `assetId`: foreign key to `AssetEntity.id`.
+- `user`: subscriber address (lowercased).
+- `startTime`: start of the unbroken subscription block (BigInt).
+- `endTime`: final expiry timestamp (BigInt).
+- `nonce`: latest subscription iteration counter.
+- `isActive`: false if revoked.
 
-- `startTime`: start of the unbroken subscription block
-- `endTime`: final expiry timestamp
-- `nonce`: latest subscription iteration counter
-- `isActive`: false if revoked
-
-> When a user tops up an active subscription, the contract sets the new event's `startTime` equal to the old `endTime`. The indexer stitches these together so `Subscription` always reflects the continuous timeline, while the `Asset_SubscriptionAdded` log table tracks each iteration individually.
+> When a user tops up an active subscription, the contract sets the new event's `startTime` equal to the old `endTime`. The indexer stitches these together so `Subscription` always reflects the continuous timeline, while the `Asset_SubscriptionAdded` log table tracks each iteration individually via nonces.
 
 ### Event log tables
 Raw event history for debugging and analytics:
@@ -120,8 +242,3 @@ Raw event history for debugging and analytics:
 - `Asset_SubscriptionCancelled`
 - `Asset_CreatorFeeClaimed`
 - `Asset_OwnershipTransferred`
-
-> **⚠️ Addresses are lowercased.** All address fields are stored in lowercase. Lowercase your address before querying:
-> ```ts
-> const address = walletAddress.toLowerCase();
-> ```
