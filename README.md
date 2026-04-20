@@ -2,27 +2,21 @@
 
 A [Ponder](https://ponder.sh) indexer for the OCR (Open Creator Rails) protocol.
 
-This indexer tracks:
+The project is structured as a monorepo with multiple indexer implementations to support different tech stacks and requirements.
 
-- **AssetRegistry**: deployment and configuration of `Asset` contracts.
-- **Asset**: subscription-gated assets and their subscribers.
+## Directory Structure
 
-It exposes convenient entities to answer questions like:
+### 1. [ponder](./ponder)
+**Framework:** [Ponder](https://ponder.sh)  
 
-- Which assets exist and who owns them?
-- Which assets is a user subscribed to?
-- Which users are subscribed to a given asset?
+The primary indexer moving forward. Ponder offers improved developer experience, strict TypeScript typing, and a simpler deployment model (Node.js runtime).
 
 ## Data model
 
 The entities are defined in `ponder.schema.ts` and mirror the original Envio implementation.
 
-- **`AssetEntity`**  
-  One row per `Asset` contract.
-  - `id`: asset contract address (lowercased).
-  - `assetId`: bytes32 id in the registry.
-  - `registryAddress`: address of the `AssetRegistry` that created it.
-  - `owner`: current `Asset` owner (creator or transferee), always lowercased.
+### 2. [envio](./envio)
+**Framework:** [Envio](https://envio.dev)
 
 - **`Subscription`**  
   One row per `(asset, user)` pair, representing their **current contiguous active state**.
@@ -62,8 +56,12 @@ After running `pnpm dev`, open the Playground at `http://localhost:42069`.
 
 ### Development
 
+**For Ponder:**
 ```bash
+cd ponder
+pnpm install
 pnpm dev
+# GraphQL available at http://localhost:42069
 ```
 
 This will:
