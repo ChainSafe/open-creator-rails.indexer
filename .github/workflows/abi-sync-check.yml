@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "open-creator-rails/apps/contracts/src/**"
+      - "open-creator-rails"
       - "config/AssetABI.ts"
       - "config/AssetRegistryABI.ts"
       - "scripts/sync-abis.js"
