@@ -16,7 +16,7 @@
     "sync": "node scripts/sync-abis.js"
   },
   "dependencies": {
-    "ponder": "^0.16.3",
+    "ponder": "^0.16.6",
     "abitype": "^1.2.3",
     "hono": "^4.12.14",
     "viem": "^2.21.3"
