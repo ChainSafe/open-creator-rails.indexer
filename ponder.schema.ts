@@ -1,17 +1,40 @@
-import { onchainTable, index } from "ponder";
+import { onchainTable, index, relations } from "ponder";
 
 // --- Entities (Mutable State) ---
 
-export const AssetEntity = onchainTable("asset_entity", (t) => ({
-  id: t.text().primaryKey(),    // Composite: `${chainId}_${assetAddress}`
+// RegistryEntity is bootstrapped from the OwnershipTransferred event emitted by
+// OpenZeppelin's Ownable constructor (Ownable(msg.sender)) when the registry is
+// deployed. AssetRegistry has no dedicated "RegistryCreated" event, so this is
+// the earliest signal we have that a registry exists on-chain.
+//
+// Consequence: `owner` is populated on deploy, but `registryFeeShare` remains
+// null until updateRegistryFeeShare() is called — the constructor sets the
+// initial fee share without emitting RegistryFeeShareUpdated.
+export const RegistryEntity = onchainTable("registry_entity", (t) => ({
+  id: t.text().primaryKey(),             // Composite: `${chainId}_${registryAddress}`
   chainId: t.integer().notNull(),
-  assetId: t.text().notNull(),  // Registry ID
   address: t.text().notNull(),
-  registryAddress: t.text().notNull(),
-  owner: t.text().notNull(),
+  owner: t.text(),                       // null until OwnershipTransferred is seen
+  registryFeeShare: t.bigint(),          // null until RegistryFeeShareUpdated is seen
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   ownerIdx: index().on(table.owner),
+}));
+
+export const AssetEntity = onchainTable("asset_entity", (t) => ({
+  id: t.text().primaryKey(),              // Composite: `${chainId}_${assetAddress}`
+  chainId: t.integer().notNull(),
+  assetId: t.text().notNull(),            // Registry asset ID
+  address: t.text().notNull(),
+  registryId: t.text().notNull(),         // FK → RegistryEntity.id: `${chainId}_${registryAddress}`
+  registryAddress: t.text().notNull(),
+  owner: t.text().notNull(),
+  subscriptionPrice: t.bigint().notNull(), // Current price per second; updated by SubscriptionPriceUpdated
+  tokenAddress: t.text().notNull(),        // Immutable ERC-20 payment token set at deployment
+}), (table) => ({
+  chainIdIdx: index().on(table.chainId),
+  ownerIdx: index().on(table.owner),
+  registryIdIdx: index().on(table.registryId),
   registryAddressIdx: index().on(table.registryAddress),
   assetIdIdx: index().on(table.assetId),
 }));
@@ -36,6 +59,27 @@ export const Subscription = onchainTable("subscription", (t) => ({
   assetIdIdx: index().on(table.assetId),
   subscriberIdx: index().on(table.subscriber),
   payerIdx: index().on(table.payer),
+}));
+
+// --- Relations ---
+
+export const registryEntityRelations = relations(RegistryEntity, ({ many }) => ({
+  assets: many(AssetEntity),
+}));
+
+export const assetEntityRelations = relations(AssetEntity, ({ one, many }) => ({
+  registry: one(RegistryEntity, {
+    fields: [AssetEntity.registryId],
+    references: [RegistryEntity.id],
+  }),
+  subscriptions: many(Subscription),
+}));
+
+export const subscriptionRelations = relations(Subscription, ({ one }) => ({
+  asset: one(AssetEntity, {
+    fields: [Subscription.assetId],
+    references: [AssetEntity.id],
+  }),
 }));
 
 // --- Events (Immutable History) ---
