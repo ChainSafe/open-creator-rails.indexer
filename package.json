@@ -19,7 +19,7 @@
     "ponder": "^0.16.6",
     "abitype": "^1.2.3",
     "hono": "^4.12.14",
-    "viem": "^2.21.3"
+    "viem": "^2.48.4"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
