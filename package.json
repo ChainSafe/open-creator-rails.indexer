@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "ponder": "^0.16.6",
-    "abitype": "^1.2.3",
+    "abitype": "^1.2.4",
     "hono": "^4.12.14",
     "viem": "^2.48.4"
   },
