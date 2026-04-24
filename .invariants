@@ -1,0 +1,27 @@
+version: "1.0"
+scope: "open-creator-rails.indexer"
+inherits: "../.invariants"
+
+# Indexer assertions. These extend the apex invariants with guarantees
+# specific to the Ponder indexer's data model and event handling.
+# Maintainer: indexer team — not agent-writable.
+
+asserts:
+
+  - id: subscription_active_state_accurate
+    claim: "Subscription entity must allow consumers to determine active state as !isTerminated && endTime > now"
+    source: codebase
+    severity: VERSIONED
+    verify:
+      search: "isActive isTerminated endTime subscription ponder schema field"
+      in_file: "open-creator-rails.indexer/ponder.schema.ts"
+    why: "isActive alone only reflects event-driven termination (revoke/cancel). Time-expired subscriptions remain isActive=true, causing silent access errors."
+    note: "Currently FAILING — ponder.schema.ts defines isActive reflecting revocation only (line 56). Fix tracked in indexer-24."
+
+  - id: all_four_events_handled
+    claim: "Indexer handles all four subscription lifecycle events: SubscriptionAdded, SubscriptionExtended, SubscriptionRevoked, SubscriptionCancelled"
+    source: codebase
+    severity: VERSIONED
+    verify:
+      search: "SubscriptionAdded SubscriptionExtended SubscriptionRevoked SubscriptionCancelled handler indexer"
+    why: "Missing any event handler causes silent indexer drift — subscriptions appear active after revocation or cancelled after they were extended."
