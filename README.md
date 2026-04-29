@@ -115,39 +115,43 @@ Grafana is available at `http://localhost:3000` (default credentials: `admin` / 
 
 ## API
 
-The indexer exposes two endpoints:
+The indexer exposes the following endpoints:
 
 | Endpoint | Description |
 |---|---|
-| `GET /` | GraphQL playground (browser UI) |
-| `POST /graphql` | GraphQL API |
+| `GET /` | Auto-generated GraphQL playground *(deprecated)* |
+| `POST /graphql` | Auto-generated GraphQL API (Ponder) *(deprecated — use `/v2/graphql`)* |
+| `POST /v2/graphql` | Custom GraphQL API (recommended) |
 | `GET /ready` | Health check — returns `200` when live |
 
-### GraphQL
+### GraphQL v2 (recommended)
 
-Open the playground at `http://localhost:42069` after starting the indexer.
+The v2 endpoint at `/v2/graphql` is the recommended API. Open the GraphiQL playground at `http://localhost:42069/v2/graphql` after starting the indexer.
 
-Ponder generates a singular (fetch by ID) and plural (list) field for each table:
+**Key differences from the auto-generated endpoint:**
+- **Case-insensitive address filters** — pass addresses in any casing; the `Address` scalar normalises them automatically
+- **Equality-only filters** — simple `where` clauses with no `_gt`/`_lt`/`_in`/AND/OR operators
+- **List queries only** — no single-item-by-id queries
 
-| Singular | Plural | Description |
-|---|---|---|
-| `assetEntity` | `assetEntitys` | Asset contract state |
-| `subscription` | `subscriptions` | Subscription state per asset–subscriber |
-| `assetRegistry_AssetCreated` | `assetRegistry_AssetCreateds` | Asset creation events |
-| `assetRegistry_RegistryFeeShareUpdated` | `assetRegistry_RegistryFeeShareUpdateds` | Registry fee share updates |
-| `assetRegistry_RegistryFeeClaimedBatch` | `assetRegistry_RegistryFeeClaimedBatchs` | Registry fee claim batches |
-| `asset_SubscriptionAdded` | `asset_SubscriptionAddeds` | New subscription events |
-| `asset_SubscriptionExtended` | `asset_SubscriptionExtendeds` | Subscription extension events |
-| `asset_SubscriptionRevoked` | `asset_SubscriptionRevokeds` | Subscription revocation events |
-| `asset_SubscriptionCancelled` | `asset_SubscriptionCancelleds` | Subscription cancellation events |
-| `asset_SubscriptionPriceUpdated` | `asset_SubscriptionPriceUpdateds` | Price update events |
-| `asset_CreatorFeeClaimed` | `asset_CreatorFeeClaimeds` | Creator fee claim events |
-| `asset_OwnershipTransferred` | `asset_OwnershipTransferreds` | Asset ownership transfer events |
+#### Queries
 
-> **⚠️ Addresses are lowercased.** All address fields are stored in lowercase. Lowercase your address before querying:
-> ```ts
-> const address = walletAddress.toLowerCase();
-> ```
+| Query | Description |
+|---|---|
+| `registryEntitys` | Registry contract state |
+| `assetEntitys` | Asset contract state |
+| `subscriptions` | Subscription state per asset–subscriber |
+| `assetRegistry_AssetCreateds` | Asset creation events |
+| `assetRegistry_OwnershipTransferreds` | Registry ownership transfers |
+| `assetRegistry_RegistryFeeShareUpdateds` | Registry fee share updates |
+| `assetRegistry_RegistryFeeClaimedBatchs` | Registry fee claim batches |
+| `asset_SubscriptionAddeds` | New subscription events |
+| `asset_SubscriptionExtendeds` | Subscription extension events |
+| `asset_SubscriptionRevokeds` | Subscription revocation events |
+| `asset_SubscriptionCancelleds` | Subscription cancellation events |
+| `asset_SubscriptionPriceUpdateds` | Price update events |
+| `asset_CreatorFeeClaimeds` | Creator fee claim events |
+| `asset_OwnershipTransferreds` | Asset ownership transfer events |
+| `_meta` | Indexer sync status per chain |
 
 **Fetch all assets by owner:**
 ```graphql
@@ -163,16 +167,25 @@ Ponder generates a singular (fetch by ID) and plural (list) field for each table
 }
 ```
 
-**Check active subscriptions for a subscriber:**
+**Check subscriptions for a payer:**
 ```graphql
 {
-  subscriptions(where: { subscriber: "0x...", isActive: true }) {
+  subscriptions(where: { payer: "0x..." }) {
     items {
       assetId
+      subscriber
       startTime
       endTime
-      payer
     }
+  }
+}
+```
+
+**Check indexer sync status:**
+```graphql
+{
+  _meta {
+    status
   }
 }
 ```
@@ -180,20 +193,22 @@ Ponder generates a singular (fetch by ID) and plural (list) field for each table
 **Pagination:**
 ```graphql
 {
-  subscriptions(limit: 20, after: "cursor_from_previous_response") {
+  subscriptions(limit: 20, offset: 0) {
     items { ... }
     pageInfo {
       hasNextPage
-      endCursor
+      hasPreviousPage
     }
+    totalCount
   }
 }
 ```
 
 > **Notes:**
+> - Address filter fields accept any casing — `"0xAbCd..."` and `"0xabcd..."` both work
 > - All `BigInt` values are returned as strings to avoid JavaScript integer overflow
-> - All addresses are lowercase hex strings
 > - `blockTimestamp` is a Unix timestamp in seconds
+> - `subscriber` is a `bytes32` identity hash, not an address
 
 ---
 

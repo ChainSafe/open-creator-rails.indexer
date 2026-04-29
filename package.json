@@ -16,9 +16,11 @@
     "sync": "node scripts/sync-abis.js"
   },
   "dependencies": {
-    "ponder": "^0.16.6",
     "abitype": "^1.2.4",
+    "graphql": "^16.13.2",
+    "graphql-yoga": "^5.21.0",
     "hono": "^4.12.14",
+    "ponder": "^0.16.6",
     "viem": "^2.48.4"
   },
   "devDependencies": {
