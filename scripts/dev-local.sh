@@ -20,6 +20,12 @@ echo "Syncing deployment addresses..."
 cp packages/config/src/deployments/registries_31337.json "$ROOT_DIR/config/deployments/registries_31337.json"
 cp packages/config/src/deployments/token_addresses.json "$ROOT_DIR/config/deployments/token_addresses.json"
 
+# Let Anvil settle the last seeded block before Ponder reads it
+sleep 1
+
+# Wipe Ponder's database so it re-indexes from block 0 against the fresh Anvil
+rm -rf "$ROOT_DIR/.ponder/pglite"
+
 # Start Ponder
 echo "Starting Ponder indexer..."
 cd "$ROOT_DIR"
