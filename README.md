@@ -119,8 +119,8 @@ The indexer exposes the following endpoints:
 
 | Endpoint | Description |
 |---|---|
-| `GET /` | Auto-generated GraphQL playground |
-| `POST /graphql` | Auto-generated GraphQL API (Ponder) |
+| `GET /` | Auto-generated GraphQL playground *(deprecated)* |
+| `POST /graphql` | Auto-generated GraphQL API (Ponder) *(deprecated — use `/v2/graphql`)* |
 | `POST /v2/graphql` | Custom GraphQL API (recommended) |
 | `GET /ready` | Health check — returns `200` when live |
 
