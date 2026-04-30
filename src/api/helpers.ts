@@ -1,5 +1,6 @@
 import { db } from "ponder:api";
-import { and, eq, asc, desc, count } from "ponder";
+import schema from "ponder:schema";
+import { and, eq, gt, lt, asc, desc, count } from "ponder";
 import { GraphQLScalarType, Kind } from "graphql";
 
 // ── Scalars ───────────────────────────────────────────────────────────────────
@@ -42,6 +43,17 @@ export function buildWhere(table: any, filter: any): any {
   return conds.length === 1 ? conds[0] : and(...(conds as any[]));
 }
 
+// ── Shared conditions ─────────────────────────────────────────────────────────
+
+export function activeSubscriptionConditions() {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  return and(
+    eq(schema.Subscription.isTerminated, false),
+    lt(schema.Subscription.startTime, now),
+    gt(schema.Subscription.endTime, now),
+  );
+}
+
 // ── Query helpers ─────────────────────────────────────────────────────────────
 
 const DEFAULT_LIMIT = 50;
@@ -54,8 +66,12 @@ export async function queryList(
   orderDirection?: string,
   limit?: number,
   offset?: number,
+  extraConditions?: any,
 ) {
-  const where = buildWhere(table, filter);
+  const filterWhere = buildWhere(table, filter);
+  const where = filterWhere && extraConditions
+    ? and(filterWhere, extraConditions)
+    : (filterWhere ?? extraConditions);
   const n = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT);
   const off = offset ?? 0;
 

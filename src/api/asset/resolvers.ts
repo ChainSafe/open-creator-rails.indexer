@@ -1,9 +1,9 @@
 import schema from "ponder:schema";
-import { byId, queryList } from "../helpers.js";
+import { byId, queryList, activeSubscriptionConditions } from "../helpers.js";
 
 export const resolvers = {
   Query: {
-    assetEntitys: (_: any, a: any) => queryList(schema.AssetEntity, a.where, a.orderBy, a.orderDirection, a.limit, a.offset),
+    assets: (_: any, a: any) => queryList(schema.AssetEntity, a.where, a.orderBy, a.orderDirection, a.limit, a.offset),
 
     asset_SubscriptionAddeds:    (_: any, a: any) => queryList(schema.Asset_SubscriptionAdded, a.where, a.orderBy, a.orderDirection, a.limit, a.offset),
     asset_SubscriptionExtendeds: (_: any, a: any) => queryList(schema.Asset_SubscriptionExtended, a.where, a.orderBy, a.orderDirection, a.limit, a.offset),
@@ -14,9 +14,11 @@ export const resolvers = {
     asset_OwnershipTransferreds: (_: any, a: any) => queryList(schema.Asset_OwnershipTransferred, a.where, a.orderBy, a.orderDirection, a.limit, a.offset),
   },
 
-  AssetEntity: {
+  Asset: {
     registry:      (parent: any) => byId(schema.RegistryEntity, parent.registryId),
     subscriptions: (parent: any, a: any) =>
-      queryList(schema.Subscription, { AND: [{ assetId: parent.id }, a.where].filter(Boolean) }, a.orderBy, a.orderDirection, a.limit, a.offset),
+      queryList(schema.Subscription, { ...a.where, assetId: parent.id }, a.orderBy, a.orderDirection, a.limit, a.offset),
+    activeSubscriptions: (parent: any, a: any) =>
+      queryList(schema.Subscription, { ...a.where, assetId: parent.id }, a.orderBy, a.orderDirection, a.limit, a.offset, activeSubscriptionConditions()),
   },
 };

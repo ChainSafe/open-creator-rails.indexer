@@ -1,14 +1,18 @@
 export const typeDefs = /* GraphQL */ `
-  type RegistryEntity {
+  type Registry {
+    # Stored Fields
     id: String! chainId: Int! address: String! owner: String registryFeeShare: BigInt
-    assets(where: AssetEntityFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetEntityPage
+    
+    # Relations
+    assets(where: AssetFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetPage
   }
-  type RegistryEntityPage { items: [RegistryEntity!]! pageInfo: PageInfo! totalCount: Int! }
-  input RegistryEntityFilter {
+  type RegistryPage { items: [Registry!]! pageInfo: PageInfo! totalCount: Int! }
+  input RegistryFilter {
     id: String  chainId: Int  address: Address  owner: Address
   }
 
   type AssetRegistry_AssetCreated {
+    # Stored Fields
     id: String! chainId: Int! assetId: String! asset: String!
     subscriptionPrice: BigInt! tokenAddress: String! owner: String!
     registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
@@ -19,6 +23,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type AssetRegistry_OwnershipTransferred {
+    # Stored Fields
     id: String! chainId: Int! previousOwner: String! newOwner: String!
     registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -28,6 +33,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type AssetRegistry_RegistryFeeShareUpdated {
+    # Stored Fields
     id: String! chainId: Int! newRegistryFeeShare: BigInt!
     registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -37,6 +43,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type AssetRegistry_RegistryFeeClaimedBatch {
+    # Stored Fields
     id: String! chainId: Int! assetId: String! totalAmount: BigInt!
     registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -46,7 +53,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   extend type Query {
-    registryEntitys(where: RegistryEntityFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): RegistryEntityPage!
+    registries(where: RegistryFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): RegistryPage!
 
     assetRegistry_AssetCreateds(where: AssetRegistry_AssetCreatedFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetRegistry_AssetCreatedPage!
 
