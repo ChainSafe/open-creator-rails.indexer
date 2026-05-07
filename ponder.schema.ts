@@ -39,26 +39,29 @@ export const AssetEntity = onchainTable("asset_entity", (t) => ({
   assetIdIdx: index().on(table.assetId),
 }));
 
-// Tracks the current state of a subscriber's subscription to an asset.
-// One row per asset–subscriber pair (not per nonce). When terms change mid-subscription
-// (price, payer, fee share), the contract creates a new nonce but the indexer preserves
-// the original startTime to show unbroken continuity. payer and nonce always reflect
-// the latest on-chain subscription record.
+// One row per asset–subscriber–nonce. The contract issues a new nonce whenever
+// terms change mid-subscription (price, payer, fee share); each nonce is an
+// independent row. SubscriptionExtended updates the latest nonce's endTime.
+// Revoke truncates endTime and sets isRevoked=true; cancel only truncates endTime.
+// Future nonces deleted by revoke/cancel are removed from the DB entirely.
 export const Subscription = onchainTable("subscription", (t) => ({
-  id: t.text().primaryKey(),       // Composite: `${AssetEntity.id}_${subscriber}`
+  id: t.text().primaryKey(),       // Composite: `${AssetEntity.id}_${subscriber}_${nonce}`
   chainId: t.integer().notNull(),
   assetId: t.text().notNull(),     // Links to AssetEntity.id
   subscriber: t.text().notNull(),  // bytes32 subscriber identity hash
-  payer: t.text().notNull(),       // address that paid (latest nonce)
-  startTime: t.bigint().notNull(), // original start of unbroken subscription continuity
-  endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionAdded & SubscriptionExtended)
-  nonce: t.bigint().notNull(),     // latest on-chain nonce (increments when terms change)
-  isActive: t.boolean().notNull(), // false when revoked or cancelled
+  payer: t.text().notNull(),       // address that paid for this nonce
+  startTime: t.bigint().notNull(), // subscription start for this nonce
+  endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended; truncated on revoke/cancel)
+  nonce: t.bigint().notNull(),     // on-chain nonce (increments when terms change)
+  isRevoked: t.boolean().notNull(), // true only when owner explicitly revoked (SubscriptionRevoked)
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   assetIdIdx: index().on(table.assetId),
   subscriberIdx: index().on(table.subscriber),
   payerIdx: index().on(table.payer),
+  nonceIdx: index().on(table.nonce),
+  startTimeIdx: index().on(table.startTime),
+  endTimeIdx: index().on(table.endTime),
 }));
 
 // --- Relations ---

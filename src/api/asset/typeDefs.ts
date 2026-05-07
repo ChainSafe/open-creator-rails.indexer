@@ -1,18 +1,23 @@
 export const typeDefs = /* GraphQL */ `
-  type AssetEntity {
+  type Asset {
+    # Stored Fields
     id: String! chainId: Int! assetId: String! address: String!
     registryId: String! registryAddress: String! owner: String!
     subscriptionPrice: BigInt! tokenAddress: String!
-    registry: RegistryEntity
+    
+    # Relations
+    registry: Registry
     subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
+    activeSubscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
   }
-  type AssetEntityPage { items: [AssetEntity!]! pageInfo: PageInfo! totalCount: Int! }
-  input AssetEntityFilter {
+  type AssetPage { items: [Asset!]! pageInfo: PageInfo! totalCount: Int! }
+  input AssetFilter {
     id: String  chainId: Int  assetId: String  address: Address
     registryId: String  registryAddress: Address  owner: Address
   }
 
   type Asset_SubscriptionAdded {
+    # Stored Fields
     id: String! chainId: Int! subscriber: String! payer: String!
     startTime: BigInt! endTime: BigInt! nonce: BigInt!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
@@ -23,6 +28,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_SubscriptionExtended {
+    # Stored Fields
     id: String! chainId: Int! subscriber: String! endTime: BigInt!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -32,6 +38,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_CreatorFeeClaimed {
+    # Stored Fields
     id: String! chainId: Int! subscriber: String! amount: BigInt!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -41,6 +48,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_SubscriptionPriceUpdated {
+    # Stored Fields
     id: String! chainId: Int! newSubscriptionPrice: BigInt!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -50,6 +58,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_SubscriptionRevoked {
+    # Stored Fields
     id: String! chainId: Int! subscriber: String!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -59,6 +68,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_SubscriptionCancelled {
+    # Stored Fields
     id: String! chainId: Int! subscriber: String!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -68,6 +78,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type Asset_OwnershipTransferred {
+    # Stored Fields
     id: String! chainId: Int! previousOwner: String! newOwner: String!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
@@ -77,7 +88,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   extend type Query {
-    assetEntitys(where: AssetEntityFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetEntityPage!
+    assets(where: AssetFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetPage!
 
     asset_SubscriptionAddeds(where: Asset_SubscriptionAddedFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): Asset_SubscriptionAddedPage!
 

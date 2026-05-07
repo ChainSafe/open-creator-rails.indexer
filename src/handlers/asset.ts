@@ -1,4 +1,5 @@
 import { ponder } from "ponder:registry";
+import { eq, and, desc, gt } from "ponder";
 import {
   AssetEntity,
   Subscription,
@@ -17,26 +18,11 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
   const payer = event.args.payer.toLowerCase();
-
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
-  const id = getSubscriptionId(chainId, assetAddress, subscriber);
 
-  // Fetch existing subscription to preserve continuity of startTime
-  const existingSub = await context.db.find(Subscription, { id });
-
-  let computedStartTime = event.args.startTime;
-
-  // When the contract creates a new nonce (terms changed mid-subscription),
-  // it sets startTime = previous subscription's endTime, chaining them seamlessly.
-  // We detect this and preserve the original startTime to show unbroken continuity.
-  // Pure extensions (same terms) are handled by SubscriptionExtended instead.
-  if (existingSub && existingSub.endTime === event.args.startTime) {
-    computedStartTime = existingSub.startTime;
-  }
-
-  // 1. Upsert Subscription
+  // 1. Insert per-nonce Subscription row (idempotent on re-index)
   await context.db.insert(Subscription).values({
-    id: id,
+    id: getSubscriptionId(chainId, assetAddress, subscriber, event.args.nonce),
     chainId: chainId,
     assetId: assetEntityId,
     subscriber: subscriber,
@@ -44,14 +30,8 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
-    isActive: true,
-  }).onConflictDoUpdate({
-    startTime: computedStartTime,
-    endTime: event.args.endTime,
-    nonce: event.args.nonce,
-    payer: payer,
-    isActive: true,
-  });
+    isRevoked: false,
+  }).onConflictDoNothing();
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionAdded).values({
@@ -72,11 +52,26 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
+  const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: extend the subscription end time
-  await context.db.update(Subscription, { id: getSubscriptionId(chainId, assetAddress, subscriber) }).set({
-    endTime: event.args.endTime,
-  });
+  // SubscriptionExtended has no nonce in the event — find the highest active nonce row
+  const rows = await context.db.sql
+    .select({ id: Subscription.id })
+    .from(Subscription)
+    .where(and(
+      eq(Subscription.assetId, assetEntityId),
+      eq(Subscription.subscriber, subscriber),
+      eq(Subscription.isRevoked, false),
+    ))
+    .orderBy(desc(Subscription.nonce))
+    .limit(1);
+
+  // 1. Update State: extend the end time of the latest active nonce
+  if (rows.length > 0) {
+    await context.db.update(Subscription, { id: rows[0]!.id }).set({
+      endTime: event.args.endTime,
+    });
+  }
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionExtended).values({
@@ -107,11 +102,31 @@ ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
+  const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: mark as inactive
-  await context.db.update(Subscription, { id: getSubscriptionId(chainId, assetAddress, subscriber) }).set({
-    isActive: false,
-  });
+  // 1. Update State: mirrors contract _removeSubscription logic exactly:
+  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
+  //    - Active nonces (startTime < now < endTime): truncated on-chain → set isRevoked + truncate endTime
+  const rows = await context.db.sql
+    .select({ id: Subscription.id, startTime: Subscription.startTime })
+    .from(Subscription)
+    .where(and(
+      eq(Subscription.assetId, assetEntityId),
+      eq(Subscription.subscriber, subscriber),
+      eq(Subscription.isRevoked, false),
+      gt(Subscription.endTime, event.block.timestamp),
+    ));
+
+  for (const row of rows) {
+    if (row.startTime >= event.block.timestamp) {
+      await context.db.delete(Subscription, { id: row.id });
+    } else {
+      await context.db.update(Subscription, { id: row.id }).set({
+        isRevoked: true,
+        endTime: event.block.timestamp,
+      });
+    }
+  }
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionRevoked).values({
@@ -128,11 +143,30 @@ ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
+  const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: mark as inactive
-  await context.db.update(Subscription, { id: getSubscriptionId(chainId, assetAddress, subscriber) }).set({
-    isActive: false,
-  });
+  // 1. Update State: mirrors contract _removeSubscription logic exactly:
+  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
+  //    - Active nonces (startTime < now < endTime): truncated on-chain → truncate endTime only (no isRevoked flag)
+  const rows = await context.db.sql
+    .select({ id: Subscription.id, startTime: Subscription.startTime })
+    .from(Subscription)
+    .where(and(
+      eq(Subscription.assetId, assetEntityId),
+      eq(Subscription.subscriber, subscriber),
+      eq(Subscription.isRevoked, false),
+      gt(Subscription.endTime, event.block.timestamp),
+    ));
+
+  for (const row of rows) {
+    if (row.startTime >= event.block.timestamp) {
+      await context.db.delete(Subscription, { id: row.id });
+    } else {
+      await context.db.update(Subscription, { id: row.id }).set({
+        endTime: event.block.timestamp,
+      });
+    }
+  }
 
   // 2. Log History
   await context.db.insert(Asset_SubscriptionCancelled).values({
