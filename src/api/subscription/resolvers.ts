@@ -11,7 +11,7 @@ export const resolvers = {
     asset: (parent: any) => byId(schema.AssetEntity, parent.assetId),
     isActive: (parent: any) => {
       const now = BigInt(Math.floor(Date.now() / 1000));
-      return !parent.isTerminated && parent.startTime <= now && now < parent.endTime;
+      return !parent.isRevoked && parent.startTime <= now && now < parent.endTime;
     },
   },
 };

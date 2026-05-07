@@ -10,15 +10,14 @@ echo "Starting Anvil..."
 anvil &
 ANVIL_PID=$!
 
-# Seed local environment from the submodule (seed-local.sh polls until anvil is ready)
+# Seed local environment (polls until anvil is ready, then runs all scenarios)
 echo "Seeding local environment..."
-cd "$SUBMODULE_DIR"
-bash scripts/seed-local.sh
+bash "$SCRIPT_DIR/seed-local.sh"
 
 # Copy updated deployment addresses into the indexer's config
 echo "Syncing deployment addresses..."
-cp packages/config/src/deployments/registries_31337.json "$ROOT_DIR/config/deployments/registries_31337.json"
-cp packages/config/src/deployments/token_addresses.json "$ROOT_DIR/config/deployments/token_addresses.json"
+cp "$SUBMODULE_DIR/packages/config/src/deployments/registries_31337.json" "$ROOT_DIR/config/deployments/registries_31337.json"
+cp "$SUBMODULE_DIR/packages/config/src/deployments/token_addresses.json" "$ROOT_DIR/config/deployments/token_addresses.json"
 
 # Let Anvil settle the last seeded block before Ponder reads it
 sleep 1

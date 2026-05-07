@@ -42,7 +42,8 @@ export const AssetEntity = onchainTable("asset_entity", (t) => ({
 // One row per asset–subscriber–nonce. The contract issues a new nonce whenever
 // terms change mid-subscription (price, payer, fee share); each nonce is an
 // independent row. SubscriptionExtended updates the latest nonce's endTime.
-// Revoke/cancel marks all non-terminated rows isTerminated=true.
+// Revoke truncates endTime and sets isRevoked=true; cancel only truncates endTime.
+// Future nonces deleted by revoke/cancel are removed from the DB entirely.
 export const Subscription = onchainTable("subscription", (t) => ({
   id: t.text().primaryKey(),       // Composite: `${AssetEntity.id}_${subscriber}_${nonce}`
   chainId: t.integer().notNull(),
@@ -50,9 +51,9 @@ export const Subscription = onchainTable("subscription", (t) => ({
   subscriber: t.text().notNull(),  // bytes32 subscriber identity hash
   payer: t.text().notNull(),       // address that paid for this nonce
   startTime: t.bigint().notNull(), // subscription start for this nonce
-  endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended)
+  endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended; truncated on revoke/cancel)
   nonce: t.bigint().notNull(),     // on-chain nonce (increments when terms change)
-  isTerminated: t.boolean().notNull(), // true when revoked or cancelled
+  isRevoked: t.boolean().notNull(), // true only when owner explicitly revoked (SubscriptionRevoked)
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   assetIdIdx: index().on(table.assetId),

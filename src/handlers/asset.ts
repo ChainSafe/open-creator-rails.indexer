@@ -30,7 +30,7 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
-    isTerminated: false,
+    isRevoked: false,
   }).onConflictDoNothing();
 
   // 2. Log History
@@ -61,7 +61,7 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      eq(Subscription.isTerminated, false),
+      eq(Subscription.isRevoked, false),
     ))
     .orderBy(desc(Subscription.nonce))
     .limit(1);
@@ -104,23 +104,28 @@ ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
   const subscriber = event.args.subscriber;
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: terminate ALL non-terminated nonces for this subscriber
-  // Mirrors contract: active nonces are truncated, future nonces are removed
+  // 1. Update State: mirrors contract _removeSubscription logic exactly:
+  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
+  //    - Active nonces (startTime < now < endTime): truncated on-chain → set isRevoked + truncate endTime
   const rows = await context.db.sql
-    .select({ id: Subscription.id })
+    .select({ id: Subscription.id, startTime: Subscription.startTime })
     .from(Subscription)
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      eq(Subscription.isTerminated, false),
+      eq(Subscription.isRevoked, false),
       gt(Subscription.endTime, event.block.timestamp),
     ));
 
   for (const row of rows) {
-    await context.db.update(Subscription, { id: row.id }).set({
-      isTerminated: true,
-      endTime: event.block.timestamp,
-    });
+    if (row.startTime >= event.block.timestamp) {
+      await context.db.delete(Subscription, { id: row.id });
+    } else {
+      await context.db.update(Subscription, { id: row.id }).set({
+        isRevoked: true,
+        endTime: event.block.timestamp,
+      });
+    }
   }
 
   // 2. Log History
@@ -140,22 +145,27 @@ ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
   const subscriber = event.args.subscriber;
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: terminate ALL non-terminated nonces for this subscriber
+  // 1. Update State: mirrors contract _removeSubscription logic exactly:
+  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
+  //    - Active nonces (startTime < now < endTime): truncated on-chain → truncate endTime only (no isRevoked flag)
   const rows = await context.db.sql
-    .select({ id: Subscription.id })
+    .select({ id: Subscription.id, startTime: Subscription.startTime })
     .from(Subscription)
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      eq(Subscription.isTerminated, false),
+      eq(Subscription.isRevoked, false),
       gt(Subscription.endTime, event.block.timestamp),
     ));
 
   for (const row of rows) {
-    await context.db.update(Subscription, { id: row.id }).set({
-      isTerminated: true,
-      endTime: event.block.timestamp,
-    });
+    if (row.startTime >= event.block.timestamp) {
+      await context.db.delete(Subscription, { id: row.id });
+    } else {
+      await context.db.update(Subscription, { id: row.id }).set({
+        endTime: event.block.timestamp,
+      });
+    }
   }
 
   // 2. Log History

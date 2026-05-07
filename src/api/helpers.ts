@@ -48,7 +48,7 @@ export function buildWhere(table: any, filter: any): any {
 export function activeSubscriptionConditions() {
   const now = BigInt(Math.floor(Date.now() / 1000));
   return and(
-    eq(schema.Subscription.isTerminated, false),
+    eq(schema.Subscription.isRevoked, false),
     lt(schema.Subscription.startTime, now),
     gt(schema.Subscription.endTime, now),
   );
