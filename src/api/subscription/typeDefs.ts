@@ -3,6 +3,7 @@ export const typeDefs = /* GraphQL */ `
     # Stored Fields
     id: String! chainId: Int! assetId: String! subscriber: String! payer: String!
     startTime: BigInt! endTime: BigInt! nonce: BigInt! isRevoked: Boolean!
+    subscriptionPrice: BigInt! registryFeeShare: BigInt!
     
     # Computed
     isActive: Boolean!
@@ -15,6 +16,7 @@ export const typeDefs = /* GraphQL */ `
   
   input SubscriptionFilter {
     id: String  chainId: Int  assetId: String  subscriber: String  payer: Address
+    subscriptionPrice: BigInt  registryFeeShare: BigInt
   }
 
   extend type Query {

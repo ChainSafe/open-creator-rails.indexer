@@ -20,11 +20,13 @@ export const typeDefs = /* GraphQL */ `
     # Stored Fields
     id: String! chainId: Int! subscriber: String! payer: String!
     startTime: BigInt! endTime: BigInt! nonce: BigInt!
+    subscriptionPrice: BigInt! registryFeeShare: BigInt!
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
   }
   type Asset_SubscriptionAddedPage { items: [Asset_SubscriptionAdded!]! pageInfo: PageInfo! totalCount: Int! }
   input Asset_SubscriptionAddedFilter {
     id: String  chainId: Int  subscriber: String  payer: Address  assetAddress: Address
+    subscriptionPrice: BigInt  registryFeeShare: BigInt
   }
 
   type Asset_SubscriptionExtended {

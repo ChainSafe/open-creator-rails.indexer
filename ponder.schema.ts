@@ -54,6 +54,8 @@ export const Subscription = onchainTable("subscription", (t) => ({
   endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended; truncated on revoke/cancel)
   nonce: t.bigint().notNull(),     // on-chain nonce (increments when terms change)
   isRevoked: t.boolean().notNull(), // true only when owner explicitly revoked (SubscriptionRevoked)
+  subscriptionPrice: t.bigint().notNull(), // per-second price at terms captured in SubscriptionAdded for this nonce
+  registryFeeShare: t.bigint().notNull(),  // registry fee share at terms captured in SubscriptionAdded for this nonce
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   assetIdIdx: index().on(table.assetId),
@@ -154,6 +156,8 @@ export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", 
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
   nonce: t.bigint().notNull(),
+  subscriptionPrice: t.bigint().notNull(),
+  registryFeeShare: t.bigint().notNull(),
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),

@@ -31,6 +31,8 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     endTime: event.args.endTime,
     nonce: event.args.nonce,
     isRevoked: false,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
   }).onConflictDoNothing();
 
   // 2. Log History
@@ -42,6 +44,8 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,

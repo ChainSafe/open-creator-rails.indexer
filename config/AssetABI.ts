@@ -394,6 +394,18 @@ export const AssetABI = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      },
+      {
+        "name": "subscriptionPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "registryFeeShare",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
