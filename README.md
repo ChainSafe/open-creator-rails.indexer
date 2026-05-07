@@ -55,6 +55,25 @@ To index against Sepolia instead, set `PONDER_RPC_URL_11155111` in `.env.local` 
 pnpm dev
 ```
 
+### RPC transport (HTTP and WebSocket)
+
+Ponder accepts both HTTP(S) and WebSocket RPC URLs in `PONDER_RPC_URL_<chainId>`.
+
+- HTTP: `https://...` or `http://...`
+- WebSocket: `wss://...` or `ws://...`
+
+Examples:
+
+```dotenv
+# Local Anvil
+PONDER_RPC_URL_31337=ws://127.0.0.1:8545
+
+# Hosted Sepolia
+PONDER_RPC_URL_11155111=wss://eth-sepolia.g.alchemy.com/v2/<KEY>
+# or
+# PONDER_RPC_URL_11155111=wss://sepolia.infura.io/ws/v3/<KEY>
+```
+
 ## Scripts
 
 | Script | Description |
@@ -85,8 +104,8 @@ The `abi-sync-check` CI workflow enforces that `config/AssetABI.ts` and `config/
 
 | Variable | Chain | Description |
 |---|---|---|
-| `PONDER_RPC_URL_31337` | Local (Anvil) | Anvil RPC URL. Enables local chain indexing. |
-| `PONDER_RPC_URL_11155111` | Sepolia | Sepolia RPC URL. Enables Sepolia indexing. |
+| `PONDER_RPC_URL_31337` | Local (Anvil) | Local RPC URL (`ws://127.0.0.1:8545` or `http://127.0.0.1:8545`). |
+| `PONDER_RPC_URL_11155111` | Sepolia | Sepolia RPC URL (`wss://...` or `https://...`). |
 | `DATABASE_URL` | — | Postgres connection string. Dev mode uses PGlite (in-process) by default. |
 
 Both RPC URLs can be set simultaneously to index multiple chains at once.
