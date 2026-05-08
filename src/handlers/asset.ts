@@ -4,10 +4,12 @@ import {
   AssetEntity,
   Subscription,
   Asset_SubscriptionAdded,
+  Asset_SubscriptionRenewed,
   Asset_SubscriptionExtended,
   Asset_CreatorFeeClaimed,
   Asset_SubscriptionRevoked,
   Asset_SubscriptionCancelled,
+  Asset_SubscriptionRemoved,
   Asset_SubscriptionPriceUpdated,
   Asset_OwnershipTransferred,
 } from "../../ponder.schema";
@@ -20,7 +22,44 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   const payer = event.args.payer.toLowerCase();
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Insert per-nonce Subscription row (idempotent on re-index)
+  // SubscriptionAdded is only emitted for brand-new subscribers — nonce is always 0
+  await context.db.insert(Subscription).values({
+    id: getSubscriptionId(chainId, assetAddress, subscriber, 0n),
+    chainId: chainId,
+    assetId: assetEntityId,
+    subscriber: subscriber,
+    payer: payer,
+    startTime: event.args.startTime,
+    endTime: event.args.endTime,
+    nonce: 0n,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
+    isRevoked: false,
+  }).onConflictDoNothing();
+
+  await context.db.insert(Asset_SubscriptionAdded).values({
+    id: getEventId(event, chainId),
+    chainId: chainId,
+    subscriber: subscriber,
+    payer: payer,
+    startTime: event.args.startTime,
+    endTime: event.args.endTime,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
+    assetAddress: assetAddress,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+});
+
+ponder.on("Asset:SubscriptionRenewed", async ({ event, context }) => {
+  const chainId = context.chain?.id as number;
+  const assetAddress = event.log.address.toLowerCase();
+  const subscriber = event.args.subscriber;
+  const payer = event.args.payer.toLowerCase();
+  const assetEntityId = getAssetEntityId(chainId, assetAddress);
+
+  // SubscriptionRenewed is emitted when terms change and a new nonce is created
   await context.db.insert(Subscription).values({
     id: getSubscriptionId(chainId, assetAddress, subscriber, event.args.nonce),
     chainId: chainId,
@@ -30,11 +69,12 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
     isRevoked: false,
   }).onConflictDoNothing();
 
-  // 2. Log History
-  await context.db.insert(Asset_SubscriptionAdded).values({
+  await context.db.insert(Asset_SubscriptionRenewed).values({
     id: getEventId(event, chainId),
     chainId: chainId,
     subscriber: subscriber,
@@ -42,6 +82,8 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     startTime: event.args.startTime,
     endTime: event.args.endTime,
     nonce: event.args.nonce,
+    subscriptionPrice: event.args.subscriptionPrice,
+    registryFeeShare: event.args.registryFeeShare,
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
@@ -66,14 +108,12 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
     .orderBy(desc(Subscription.nonce))
     .limit(1);
 
-  // 1. Update State: extend the end time of the latest active nonce
   if (rows.length > 0) {
     await context.db.update(Subscription, { id: rows[0]!.id }).set({
       endTime: event.args.endTime,
     });
   }
 
-  // 2. Log History
   await context.db.insert(Asset_SubscriptionExtended).values({
     id: getEventId(event, chainId),
     chainId: chainId,
@@ -102,37 +142,37 @@ ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
+  const revokedNonce = event.args.nonce;
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: mirrors contract _removeSubscription logic exactly:
-  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
-  //    - Active nonces (startTime < now < endTime): truncated on-chain → set isRevoked + truncate endTime
-  const rows = await context.db.sql
-    .select({ id: Subscription.id, startTime: Subscription.startTime })
+  // The event tells us exactly which nonce was truncated. Update it + delete any higher future nonces.
+  const revokedId = getSubscriptionId(chainId, assetAddress, subscriber, revokedNonce);
+  await context.db.update(Subscription, { id: revokedId }).set({
+    isRevoked: true,
+    endTime: event.args.endTime,
+  }).catch(() => {});
+
+  // Delete future nonces that were removed on-chain (nonce > revokedNonce)
+  const futureRows = await context.db.sql
+    .select({ id: Subscription.id })
     .from(Subscription)
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
       eq(Subscription.isRevoked, false),
-      gt(Subscription.endTime, event.block.timestamp),
+      gt(Subscription.nonce, revokedNonce),
     ));
 
-  for (const row of rows) {
-    if (row.startTime >= event.block.timestamp) {
-      await context.db.delete(Subscription, { id: row.id });
-    } else {
-      await context.db.update(Subscription, { id: row.id }).set({
-        isRevoked: true,
-        endTime: event.block.timestamp,
-      });
-    }
+  for (const row of futureRows) {
+    await context.db.delete(Subscription, { id: row.id });
   }
 
-  // 2. Log History
   await context.db.insert(Asset_SubscriptionRevoked).values({
     id: getEventId(event, chainId),
     chainId: chainId,
     subscriber: subscriber,
+    nonce: revokedNonce,
+    endTime: event.args.endTime,
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
@@ -143,33 +183,62 @@ ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
   const assetAddress = event.log.address.toLowerCase();
   const subscriber = event.args.subscriber;
+  const cancelledNonce = event.args.nonce;
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // 1. Update State: mirrors contract _removeSubscription logic exactly:
-  //    - Future nonces (startTime >= now): deleted on-chain → delete from DB so nonce can be reused
-  //    - Active nonces (startTime < now < endTime): truncated on-chain → truncate endTime only (no isRevoked flag)
-  const rows = await context.db.sql
-    .select({ id: Subscription.id, startTime: Subscription.startTime })
+  // Truncate the active nonce's endTime (no isRevoked flag for cancellations)
+  const cancelledId = getSubscriptionId(chainId, assetAddress, subscriber, cancelledNonce);
+  await context.db.update(Subscription, { id: cancelledId }).set({
+    endTime: event.args.endTime,
+  }).catch(() => {});
+
+  // Delete future nonces that were removed on-chain (nonce > cancelledNonce)
+  const futureRows = await context.db.sql
+    .select({ id: Subscription.id })
     .from(Subscription)
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
       eq(Subscription.isRevoked, false),
-      gt(Subscription.endTime, event.block.timestamp),
+      gt(Subscription.nonce, cancelledNonce),
+    ));
+
+  for (const row of futureRows) {
+    await context.db.delete(Subscription, { id: row.id });
+  }
+
+  await context.db.insert(Asset_SubscriptionCancelled).values({
+    id: getEventId(event, chainId),
+    chainId: chainId,
+    subscriber: subscriber,
+    nonce: cancelledNonce,
+    endTime: event.args.endTime,
+    assetAddress: assetAddress,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+});
+
+ponder.on("Asset:SubscriptionRemoved", async ({ event, context }) => {
+  const chainId = context.chain?.id as number;
+  const assetAddress = event.log.address.toLowerCase();
+  const subscriber = event.args.subscriber;
+  const assetEntityId = getAssetEntityId(chainId, assetAddress);
+
+  // All subscriptions were future-only and deleted on-chain — remove all remaining rows
+  const rows = await context.db.sql
+    .select({ id: Subscription.id })
+    .from(Subscription)
+    .where(and(
+      eq(Subscription.assetId, assetEntityId),
+      eq(Subscription.subscriber, subscriber),
     ));
 
   for (const row of rows) {
-    if (row.startTime >= event.block.timestamp) {
-      await context.db.delete(Subscription, { id: row.id });
-    } else {
-      await context.db.update(Subscription, { id: row.id }).set({
-        endTime: event.block.timestamp,
-      });
-    }
+    await context.db.delete(Subscription, { id: row.id });
   }
 
-  // 2. Log History
-  await context.db.insert(Asset_SubscriptionCancelled).values({
+  await context.db.insert(Asset_SubscriptionRemoved).values({
     id: getEventId(event, chainId),
     chainId: chainId,
     subscriber: subscriber,
@@ -184,12 +253,10 @@ ponder.on("Asset:SubscriptionPriceUpdated", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase();
   const newSubscriptionPrice = event.args.newSubscriptionPrice;
 
-  // 1. Update mutable Asset Entity
   await context.db.update(AssetEntity, { id: getAssetEntityId(chainId, assetAddress) }).set({
     subscriptionPrice: newSubscriptionPrice,
   });
 
-  // 2. Log History
   await context.db.insert(Asset_SubscriptionPriceUpdated).values({
     id: getEventId(event, chainId),
     chainId: chainId,
@@ -205,20 +272,16 @@ ponder.on("Asset:OwnershipTransferred", async ({ event, context }) => {
   const assetAddress = event.log.address.toLowerCase();
   const newOwner = event.args.newOwner.toLowerCase();
 
-  // 1. Update the mutable Asset Entity (if exists)
   try {
     await context.db.update(AssetEntity, { id: getAssetEntityId(chainId, assetAddress) }).set({
       owner: newOwner,
     });
   } catch (e: any) {
-    // If the AssetEntity doesn't exist (e.g., event emitted in constructor before registry created it), skip update.
-    // The AssetCreated event will set the correct initial state.
     if (!e.message?.includes('No existing record found')) {
       throw e;
     }
   }
 
-  // 2. Log History
   await context.db.insert(Asset_OwnershipTransferred).values({
     id: getEventId(event, chainId),
     chainId: chainId,

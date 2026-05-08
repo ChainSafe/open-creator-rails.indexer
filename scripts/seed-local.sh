@@ -24,9 +24,13 @@ echo "Waiting for Anvil..."
 while ! cast chain-id --rpc-url $RPC_URL > /dev/null 2>&1; do sleep 1; done
 echo "Anvil is up!"
 
-# Clear stale deployment JSON from previous runs so entries don't accumulate
-echo '[]' > packages/config/src/deployments/registries_31337.json
-echo '{}' > packages/config/src/deployments/token_addresses.json
+DEPLOY_DIR="$INDEXER_ROOT/config/deployments"
+
+# Clear stale local-chain entries from previous runs (preserve other chains)
+mkdir -p deployments
+echo '[]' > deployments/registries_31337.json
+jq 'del(.["31337"])' deployments/token_addresses.json > deployments/token_addresses.tmp.json \
+  && mv deployments/token_addresses.tmp.json deployments/token_addresses.json
 
 echo "1. Deploying Test Token..."
 ./scripts/deployTestToken.sh
@@ -34,8 +38,7 @@ echo "1. Deploying Test Token..."
 echo "2. Deploying Registry (80% Creator / 20% Registry)..."
 ./scripts/deployRegistry.sh 80 20
 
-TOKEN_ADDR=$(jq -r '.["31337"]' packages/config/src/deployments/token_addresses.json)
-REGISTRY_ADDR=$(jq -r '.[0].address' packages/config/src/deployments/registries_31337.json)
+TOKEN_ADDR=$(jq -r '.["31337"]' deployments/token_addresses.json)
 
 echo "3. Creating Assets..."
 for i in {1..8}; do
@@ -43,6 +46,11 @@ for i in {1..8}; do
   ./scripts/createAsset.sh 0 "local_asset_$i" $price $TOKEN_ADDR $DEPLOYER_ADDR > /dev/null
   echo "  local_asset_$i (price: $price tokens/sec)"
 done
+
+# Sync submodule deployments → config/deployments (single source of truth)
+node "$INDEXER_ROOT/scripts/sync-deployments.js"
+
+REGISTRY_ADDR=$(jq -r '.[0].address' "$DEPLOY_DIR/registries_31337.json")
 
 echo "4. Minting tokens to subscribers..."
 ./scripts/mintTestToken.sh $SUB1_ADDR 50000000000000000000000 > /dev/null
@@ -53,7 +61,51 @@ asset_addr() {
   local id_hash
   id_hash=$(cast keccak "$1")
   jq -r --arg h "$id_hash" 'first(.[0].assets[] | select(.assetIdHash == $h) | .address)' \
-    packages/config/src/deployments/registries_31337.json
+    "$DEPLOY_DIR/registries_31337.json"
+}
+
+# Subscribe using an explicit subscriberId — produces a subscriber hash compatible with cancelSubscription.
+# Asset._hash(string,address) = keccak256(abi.encode(subscriberId, subscriberAddr))
+subscribe_with_id() {
+  local sub_id=$1 sub_addr=$2 sub_pk=$3 asset_name=$4 value=$5
+
+  local asset_id spender token_addr sub_hash signed v r s deadline payer
+  asset_id=$(cast keccak "$asset_name")
+  spender=$(cast call $REGISTRY_ADDR "getAsset(bytes32)(address)" $asset_id --rpc-url $RPC_URL)
+  token_addr=$(cast call $spender "getTokenAddress()(address)" --rpc-url $RPC_URL)
+  sub_hash=$(cast keccak "$(cast abi-encode "f(string,address)" "$sub_id" "$sub_addr")")
+
+  signed=$(forge script scripts/Utils.s.sol:UtilsScript \
+    --sig "signPermit(uint256,address,uint256,address,uint256)" \
+    $value $spender 1800 $token_addr $sub_pk \
+    --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+
+  v=$(echo $signed | jq -r '.returns.v.value')
+  r=$(echo $signed | jq -r '.returns.r.value')
+  s=$(echo $signed | jq -r '.returns.s.value')
+  deadline=$(echo $signed | jq -r '.returns.deadline.value')
+  payer=$(echo $signed | jq -r '.returns.owner.value')
+
+  cast send $REGISTRY_ADDR \
+    "subscribe(bytes32,bytes32,address,address,uint256,uint256,uint8,bytes32,bytes32)" \
+    $asset_id $sub_hash $payer $spender $value $deadline $v $r $s \
+    --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+}
+
+# Cancel subscription: subscriber signs a challenge and calls cancelSubscription on the Asset contract.
+cancel_subscription() {
+  local sub_id=$1 sub_pk=$2 asset_addr=$3
+
+  local result sig
+  result=$(forge script scripts/Utils.s.sol:UtilsScript \
+    --sig "signCancel(string,address,uint256)" \
+    "$sub_id" "$asset_addr" $sub_pk \
+    --rpc-url $RPC_URL --private-key $PRIVATE_KEY --json)
+
+  sig=$(echo $result | jq -r '.returns.signature.value')
+
+  cast send $asset_addr "cancelSubscription(string,bytes)" "$sub_id" "$sig" \
+    --rpc-url $RPC_URL --private-key $sub_pk > /dev/null
 }
 
 # ── Scenario: Active subscriptions ────────────────────────────────────────────
@@ -83,23 +135,21 @@ echo ""
 echo "=== Scenario: Cancel ==="
 
 echo "  Sub2 -> asset_2 (1h)"
-./scripts/subscribe.sh 0 "local_asset_2" $SUB2_ADDR 3600 $SUB2_PK > /dev/null
-cast send $REGISTRY_ADDR "cancelSubscription(bytes32,bytes32)" \
-  "$(cast keccak "local_asset_2")" $SUB2_HASH \
-  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
-echo "  Registry cancelled Sub2 from asset_2 (isRevoked=false, endTime truncated)"
+ASSET2_ADDR=$(asset_addr "local_asset_2")
+subscribe_with_id "sub2_asset2" $SUB2_ADDR $SUB2_PK "local_asset_2" 3600
+cancel_subscription "sub2_asset2" $SUB2_PK $ASSET2_ADDR
+echo "  Subscriber cancelled Sub2 from asset_2 (isRevoked=false, endTime truncated)"
 
 # ── Scenario: Re-subscribe after cancel ───────────────────────────────────────
 echo ""
 echo "=== Scenario: Re-subscribe After Cancel (nonce reuse) ==="
 
 echo "  Sub1 -> asset_3 (30m)"
-./scripts/subscribe.sh 0 "local_asset_3" $SUB1_ADDR 1800 $SUB1_PK > /dev/null
-cast send $REGISTRY_ADDR "cancelSubscription(bytes32,bytes32)" \
-  "$(cast keccak "local_asset_3")" $SUB1_HASH \
-  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+ASSET3_ADDR=$(asset_addr "local_asset_3")
+subscribe_with_id "sub1_asset3" $SUB1_ADDR $SUB1_PK "local_asset_3" 1800
+cancel_subscription "sub1_asset3" $SUB1_PK $ASSET3_ADDR
 echo "  Cancelled, re-subscribing (contract reuses nonce 0)..."
-./scripts/subscribe.sh 0 "local_asset_3" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
+subscribe_with_id "sub1_asset3" $SUB1_ADDR $SUB1_PK "local_asset_3" 3600
 echo "  Sub1 re-subscribed to asset_3"
 
 # ── Scenario: Price change → new nonce ────────────────────────────────────────
@@ -132,36 +182,28 @@ echo ""
 echo "=== Scenario: Future Subscription Cancelled ==="
 
 echo "  Sub2 -> asset_6 (1h, nonce 0 active)"
-./scripts/subscribe.sh 0 "local_asset_6" $SUB2_ADDR 3600 $SUB2_PK > /dev/null
+ASSET6_ADDR=$(asset_addr "local_asset_6")
+subscribe_with_id "sub2_asset6" $SUB2_ADDR $SUB2_PK "local_asset_6" 3600
 ./scripts/setSubscriptionPrice.sh 0 "local_asset_6" 50 $PRIVATE_KEY > /dev/null
 echo "  Sub2 -> asset_6 again (nonce 1 future, chains after nonce 0)"
-./scripts/subscribe.sh 0 "local_asset_6" $SUB2_ADDR 3600 $SUB2_PK > /dev/null
-cast send $REGISTRY_ADDR "cancelSubscription(bytes32,bytes32)" \
-  "$(cast keccak "local_asset_6")" $SUB2_HASH \
-  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+subscribe_with_id "sub2_asset6" $SUB2_ADDR $SUB2_PK "local_asset_6" 3600
+cancel_subscription "sub2_asset6" $SUB2_PK $ASSET6_ADDR
 echo "  Cancelled (nonce 0 truncated, isRevoked=false; nonce 1 deleted from DB)"
 
 # ── Scenario: Active + future cancel then re-subscribe ────────────────────────
 echo ""
 echo "=== Scenario: Active + Future Cancel then Re-subscribe ==="
 
-# nonce 0: active
 echo "  Sub1 -> asset_7 (1h, nonce 0 active)"
-./scripts/subscribe.sh 0 "local_asset_7" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
-# price change forces a new nonce on the next subscribe
+ASSET7_ADDR=$(asset_addr "local_asset_7")
+subscribe_with_id "sub1_asset7" $SUB1_ADDR $SUB1_PK "local_asset_7" 3600
 ./scripts/setSubscriptionPrice.sh 0 "local_asset_7" 50 $PRIVATE_KEY > /dev/null
-# nonce 1: future (chains after nonce 0's endTime)
 echo "  Sub1 -> asset_7 again (nonce 1 future)"
-./scripts/subscribe.sh 0 "local_asset_7" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
-# cancel: nonce 0 truncated + nonces[sub] decremented back to 0; nonce 1 deleted from DB
-cast send $REGISTRY_ADDR "cancelSubscription(bytes32,bytes32)" \
-  "$(cast keccak "local_asset_7")" $SUB1_HASH \
-  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+subscribe_with_id "sub1_asset7" $SUB1_ADDR $SUB1_PK "local_asset_7" 3600
+cancel_subscription "sub1_asset7" $SUB1_PK $ASSET7_ADDR
 echo "  Cancelled — nonce 0 truncated, nonce 1 deleted, on-chain nonces[sub]=0"
-# re-subscribe: contract finds sub still in subscribers set, reads nonce 0's truncated endTime,
-# startTime=now != truncated endTime so increments → nonce 1 again; SubscriptionAdded(nonce=1)
-echo "  Re-subscribing (contract emits SubscriptionAdded nonce=1)..."
-./scripts/subscribe.sh 0 "local_asset_7" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
+echo "  Re-subscribing (contract emits SubscriptionRenewed nonce=1)..."
+subscribe_with_id "sub1_asset7" $SUB1_ADDR $SUB1_PK "local_asset_7" 3600
 echo "  Sub1 re-subscribed to asset_7 (nonce 1 cleanly re-inserted in DB)"
 
 echo ""

@@ -14,10 +14,6 @@ ANVIL_PID=$!
 echo "Seeding local environment..."
 bash "$SCRIPT_DIR/seed-local.sh"
 
-# Copy updated deployment addresses into the indexer's config
-echo "Syncing deployment addresses..."
-cp "$SUBMODULE_DIR/packages/config/src/deployments/registries_31337.json" "$ROOT_DIR/config/deployments/registries_31337.json"
-cp "$SUBMODULE_DIR/packages/config/src/deployments/token_addresses.json" "$ROOT_DIR/config/deployments/token_addresses.json"
 
 # Let Anvil settle the last seeded block before Ponder reads it
 sleep 1
