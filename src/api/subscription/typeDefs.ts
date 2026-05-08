@@ -6,7 +6,7 @@ export const typeDefs = /* GraphQL */ `
     subscriptionPrice: BigInt! registryFeeShare: BigInt! isRevoked: Boolean!
     
     # Computed
-    isActive: Boolean!
+    isExpired: Boolean! isActive: Boolean!
     
     # Relations
     asset: Asset

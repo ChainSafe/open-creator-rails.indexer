@@ -9,6 +9,10 @@ export const resolvers = {
 
   Subscription: {
     asset: (parent: any) => byId(schema.AssetEntity, parent.assetId),
+    isExpired: (parent: any) => {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      return now >= parent.endTime;
+    },
     isActive: (parent: any) => {
       const now = BigInt(Math.floor(Date.now() / 1000));
       return !parent.isRevoked && parent.startTime <= now && now < parent.endTime;

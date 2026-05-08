@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { eq, and, desc, gt } from "ponder";
+import { eq, and, desc, gt, lte } from "ponder";
 import {
   AssetEntity,
   Subscription,
@@ -96,13 +96,17 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
   const subscriber = event.args.subscriber;
   const assetEntityId = getAssetEntityId(chainId, assetAddress);
 
-  // SubscriptionExtended has no nonce in the event — find the highest active nonce row
+  // SubscriptionExtended has no nonce in the event — find the highest active nonce row.
+  // Gate to active only: startTime <= now < endTime, consistent with contract semantics.
+  const now = event.block.timestamp;
   const rows = await context.db.sql
     .select({ id: Subscription.id })
     .from(Subscription)
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
+      lte(Subscription.startTime, now),
+      gt(Subscription.endTime, now),
       eq(Subscription.isRevoked, false),
     ))
     .orderBy(desc(Subscription.nonce))
