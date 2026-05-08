@@ -159,7 +159,6 @@ ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      eq(Subscription.isRevoked, false),
       gt(Subscription.nonce, revokedNonce),
     ));
 
@@ -199,7 +198,6 @@ ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      eq(Subscription.isRevoked, false),
       gt(Subscription.nonce, cancelledNonce),
     ));
 
