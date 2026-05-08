@@ -12,7 +12,7 @@
     "serve": "ponder serve",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc",
-    "contracts:build": "cd open-creator-rails/apps/contracts && forge build",
+    "contracts:build": "cd open-creator-rails && forge build",
     "sync": "node scripts/sync-abis.js"
   },
   "dependencies": {
