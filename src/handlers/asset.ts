@@ -105,8 +105,6 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
     .where(and(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, subscriber),
-      lte(Subscription.startTime, now),
-      gt(Subscription.endTime, now),
       eq(Subscription.isRevoked, false),
     ))
     .orderBy(desc(Subscription.nonce))
