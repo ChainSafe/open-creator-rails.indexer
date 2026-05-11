@@ -31,24 +31,6 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "cancelSubscription",
-    "inputs": [
-      {
-        "name": "_assetId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "_subscriber",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "claimRegistryFee",
     "inputs": [
       {

@@ -39,11 +39,12 @@ export const AssetEntity = onchainTable("asset_entity", (t) => ({
   assetIdIdx: index().on(table.assetId),
 }));
 
-// One row per asset–subscriber–nonce. The contract issues a new nonce whenever
-// terms change mid-subscription (price, payer, fee share); each nonce is an
-// independent row. SubscriptionExtended updates the latest nonce's endTime.
+// One row per asset–subscriber–nonce. Nonce 0 created by SubscriptionAdded;
+// subsequent nonces by SubscriptionRenewed (terms changed). SubscriptionExtended
+// updates the latest nonce's endTime in-place.
 // Revoke truncates endTime and sets isRevoked=true; cancel only truncates endTime.
-// Future nonces deleted by revoke/cancel are removed from the DB entirely.
+// Future nonces and all-future-deleted subscribers (SubscriptionRemoved) are
+// removed from the DB entirely.
 export const Subscription = onchainTable("subscription", (t) => ({
   id: t.text().primaryKey(),       // Composite: `${AssetEntity.id}_${subscriber}_${nonce}`
   chainId: t.integer().notNull(),
@@ -52,8 +53,10 @@ export const Subscription = onchainTable("subscription", (t) => ({
   payer: t.text().notNull(),       // address that paid for this nonce
   startTime: t.bigint().notNull(), // subscription start for this nonce
   endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended; truncated on revoke/cancel)
-  nonce: t.bigint().notNull(),     // on-chain nonce (increments when terms change)
-  isRevoked: t.boolean().notNull(), // true only when owner explicitly revoked (SubscriptionRevoked)
+  nonce: t.bigint().notNull(),              // on-chain nonce (increments when terms change)
+  subscriptionPrice: t.bigint().notNull(), // price per second at time of subscription
+  registryFeeShare: t.bigint().notNull(),  // registry fee share at time of subscription
+  isRevoked: t.boolean().notNull(),        // true only when owner explicitly revoked (SubscriptionRevoked)
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   assetIdIdx: index().on(table.assetId),
@@ -153,7 +156,28 @@ export const Asset_SubscriptionAdded = onchainTable("asset_subscription_added", 
   payer: t.text().notNull(),
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
+  subscriptionPrice: t.bigint().notNull(),
+  registryFeeShare: t.bigint().notNull(),
+  assetAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  chainIdIdx: index().on(table.chainId),
+  subscriberIdx: index().on(table.subscriber),
+  payerIdx: index().on(table.payer),
+  assetAddressIdx: index().on(table.assetAddress),
+}));
+
+export const Asset_SubscriptionRenewed = onchainTable("asset_subscription_renewed", (t) => ({
+  id: t.text().primaryKey(),   // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
+  chainId: t.integer().notNull(),
+  subscriber: t.text().notNull(),
+  payer: t.text().notNull(),
+  startTime: t.bigint().notNull(),
+  endTime: t.bigint().notNull(),
   nonce: t.bigint().notNull(),
+  subscriptionPrice: t.bigint().notNull(),
+  registryFeeShare: t.bigint().notNull(),
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
@@ -208,6 +232,8 @@ export const Asset_SubscriptionRevoked = onchainTable("asset_subscription_revoke
   id: t.text().primaryKey(),  // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
   chainId: t.integer().notNull(),
   subscriber: t.text().notNull(),
+  nonce: t.bigint().notNull(),
+  endTime: t.bigint().notNull(),
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
@@ -218,6 +244,21 @@ export const Asset_SubscriptionRevoked = onchainTable("asset_subscription_revoke
 }));
 
 export const Asset_SubscriptionCancelled = onchainTable("asset_subscription_cancelled", (t) => ({
+  id: t.text().primaryKey(),   // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
+  chainId: t.integer().notNull(),
+  subscriber: t.text().notNull(),
+  nonce: t.bigint().notNull(),
+  endTime: t.bigint().notNull(),
+  assetAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  chainIdIdx: index().on(table.chainId),
+  subscriberIdx: index().on(table.subscriber),
+  assetAddressIdx: index().on(table.assetAddress),
+}));
+
+export const Asset_SubscriptionRemoved = onchainTable("asset_subscription_removed", (t) => ({
   id: t.text().primaryKey(),   // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
   chainId: t.integer().notNull(),
   subscriber: t.text().notNull(),

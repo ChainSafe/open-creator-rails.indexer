@@ -2,10 +2,11 @@ export const typeDefs = /* GraphQL */ `
   type Subscription {
     # Stored Fields
     id: String! chainId: Int! assetId: String! subscriber: String! payer: String!
-    startTime: BigInt! endTime: BigInt! nonce: BigInt! isRevoked: Boolean!
+    startTime: BigInt! endTime: BigInt! nonce: BigInt!
+    subscriptionPrice: BigInt! registryFeeShare: BigInt! isRevoked: Boolean!
     
     # Computed
-    isActive: Boolean!
+    isExpired: Boolean! isActive: Boolean!
     
     # Relations
     asset: Asset
