@@ -22,10 +22,10 @@ importers:
         version: 4.12.18
       ponder:
         specifier: ^0.16.6
-        version: 0.16.6(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(hono@4.12.18)(typescript@5.9.3)(viem@2.48.8(typescript@5.9.3))
+        version: 0.16.6(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(hono@4.12.18)(typescript@5.9.3)(viem@2.48.11(typescript@5.9.3))
       viem:
-        specifier: ^2.48.8
-        version: 2.48.8(typescript@5.9.3)
+        specifier: ^2.48.11
+        version: 2.48.11(typescript@5.9.3)
     devDependencies:
       '@types/node':
         specifier: ^20.10.0
@@ -1533,6 +1533,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  semver@7.8.0:
+    resolution: {integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   shebang-command@2.0.0:
     resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
     engines: {node: '>=8'}
@@ -1694,8 +1699,8 @@ packages:
   urlpattern-polyfill@10.1.0:
     resolution: {integrity: sha512-IGjKp/o0NL3Bso1PymYURCJxMPNAf/ILOpendP9f5B6e1rTJgdgiOvgfoT8VxCAdY+Wisb9uhGaJJf3yZ2V9nw==}
 
-  viem@2.48.8:
-    resolution: {integrity: sha512-Xj3Nrt66SKtn06kczU91ELn9Difr84ZM5A62BTlaisT5lpgt058i2mBkfMZCXHGb1ocOLjzC2ztPhD0Lvky7uQ==}
+  viem@2.48.11:
+    resolution: {integrity: sha512-+WZ5E0dBS6GtKb+1wEk5DeYRRRW42+pFnXCo67Ydodf42sBwO+hu3wnQy66lc4MKmHz+llPVdbyehYr9oTE2iw==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -2120,9 +2125,9 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@ponder/utils@0.2.18(typescript@5.9.3)(viem@2.48.8(typescript@5.9.3))':
+  '@ponder/utils@0.2.18(typescript@5.9.3)(viem@2.48.11(typescript@5.9.3))':
     dependencies:
-      viem: 2.48.8(typescript@5.9.3)
+      viem: 2.48.11(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
 
@@ -2239,7 +2244,7 @@ snapshots:
       graphemer: 1.4.0
       ignore: 5.3.2
       natural-compare: 1.4.0
-      semver: 7.7.4
+      semver: 7.8.0
       ts-api-utils: 1.4.3(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
@@ -2286,7 +2291,7 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.3
-      semver: 7.7.4
+      semver: 7.8.0
       ts-api-utils: 1.4.3(typescript@5.9.3)
     optionalDependencies:
       typescript: 5.9.3
@@ -2302,7 +2307,7 @@ snapshots:
       '@typescript-eslint/types': 6.21.0
       '@typescript-eslint/typescript-estree': 6.21.0(typescript@5.9.3)
       eslint: 8.57.1
-      semver: 7.7.4
+      semver: 7.8.0
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -3081,7 +3086,7 @@ snapshots:
       sonic-boom: 3.8.1
       thread-stream: 2.7.0
 
-  ponder@0.16.6(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(hono@4.12.18)(typescript@5.9.3)(viem@2.48.8(typescript@5.9.3)):
+  ponder@0.16.6(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(hono@4.12.18)(typescript@5.9.3)(viem@2.48.11(typescript@5.9.3)):
     dependencies:
       '@babel/code-frame': 7.29.0
       '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
@@ -3090,7 +3095,7 @@ snapshots:
       '@escape.tech/graphql-armor-max-depth': 2.4.2
       '@escape.tech/graphql-armor-max-tokens': 2.5.1
       '@hono/node-server': 1.19.5(hono@4.12.18)
-      '@ponder/utils': 0.2.18(typescript@5.9.3)(viem@2.48.8(typescript@5.9.3))
+      '@ponder/utils': 0.2.18(typescript@5.9.3)(viem@2.48.11(typescript@5.9.3))
       abitype: 0.10.3(typescript@5.9.3)
       ansi-escapes: 7.3.0
       commander: 12.1.0
@@ -3116,7 +3121,7 @@ snapshots:
       stacktrace-parser: 0.1.11
       superjson: 2.2.6
       terminal-size: 4.0.1
-      viem: 2.48.8(typescript@5.9.3)
+      viem: 2.48.11(typescript@5.9.3)
       vite: 5.4.21(@types/node@20.19.37)
       vite-node: 1.0.2(@types/node@20.19.37)
       vite-tsconfig-paths: 4.3.1(typescript@5.9.3)(vite@5.4.21(@types/node@20.19.37))
@@ -3271,6 +3276,8 @@ snapshots:
 
   semver@7.7.4: {}
 
+  semver@7.8.0: {}
+
   shebang-command@2.0.0:
     dependencies:
       shebang-regex: 3.0.0
@@ -3395,7 +3402,7 @@ snapshots:
 
   urlpattern-polyfill@10.1.0: {}
 
-  viem@2.48.8(typescript@5.9.3):
+  viem@2.48.11(typescript@5.9.3):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
