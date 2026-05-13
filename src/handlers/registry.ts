@@ -28,6 +28,7 @@ ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
     registryAddress: registryAddress,
     owner: owner,
     subscriptionPrice: event.args.subscriptionPrice,
+    subscriptionDuration: event.args.subscriptionDuration,
     tokenAddress: tokenAddress,
   });
 
@@ -38,6 +39,7 @@ ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
     assetId: event.args.assetId,
     asset: assetAddress,
     subscriptionPrice: event.args.subscriptionPrice,
+    subscriptionDuration: event.args.subscriptionDuration,
     tokenAddress: tokenAddress,
     owner: owner,
     registryAddress: registryAddress,

@@ -14,7 +14,7 @@ export const typeDefs = /* GraphQL */ `
   type AssetRegistry_AssetCreated {
     # Stored Fields
     id: String! chainId: Int! assetId: String! asset: String!
-    subscriptionPrice: BigInt! tokenAddress: String! owner: String!
+    subscriptionPrice: BigInt! subscriptionDuration: BigInt! tokenAddress: String! owner: String!
     registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
   }
   type AssetRegistry_AssetCreatedPage { items: [AssetRegistry_AssetCreated!]! pageInfo: PageInfo! totalCount: Int! }
