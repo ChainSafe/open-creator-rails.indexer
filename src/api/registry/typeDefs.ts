@@ -52,6 +52,24 @@ export const typeDefs = /* GraphQL */ `
     id: String  chainId: Int  assetId: String  registryAddress: Address
   }
 
+  type AssetRegistry_RegistryFeeClaimed {
+    # Stored Fields
+    id: String! chainId: Int! assetId: String! assetEntityId: String
+    subscriber: String! amount: BigInt!
+    claimedAtTimestamp: BigInt! claimedAtNonce: BigInt! subscriptionId: String
+    registryAddress: String! blockNumber: BigInt! blockTimestamp: BigInt!
+
+    # Relations
+    asset: Asset
+    subscription: Subscription
+  }
+  type AssetRegistry_RegistryFeeClaimedPage { items: [AssetRegistry_RegistryFeeClaimed!]! pageInfo: PageInfo! totalCount: Int! }
+  input AssetRegistry_RegistryFeeClaimedFilter {
+    id: String  chainId: Int  assetId: String  assetEntityId: String
+    subscriber: String  registryAddress: Address
+    claimedAtNonce: BigInt  subscriptionId: String
+  }
+
   extend type Query {
     registries(where: RegistryFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): RegistryPage!
 
@@ -62,5 +80,7 @@ export const typeDefs = /* GraphQL */ `
     assetRegistry_RegistryFeeShareUpdateds(where: AssetRegistry_RegistryFeeShareUpdatedFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetRegistry_RegistryFeeShareUpdatedPage!
 
     assetRegistry_RegistryFeeClaimedBatchs(where: AssetRegistry_RegistryFeeClaimedBatchFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetRegistry_RegistryFeeClaimedBatchPage!
+
+    assetRegistry_RegistryFeeClaimeds(where: AssetRegistry_RegistryFeeClaimedFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): AssetRegistry_RegistryFeeClaimedPage!
   }
 `;

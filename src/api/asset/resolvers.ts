@@ -21,4 +21,8 @@ export const resolvers = {
     activeSubscriptions: (parent: any, a: any) =>
       queryList(schema.Subscription, { ...a.where, assetId: parent.id }, a.orderBy, a.orderDirection, a.limit, a.offset, activeSubscriptionConditions()),
   },
+
+  Asset_CreatorFeeClaimed: {
+    subscription: (parent: any) => parent.subscriptionId ? byId(schema.Subscription, parent.subscriptionId) : null,
+  },
 };

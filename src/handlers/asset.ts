@@ -129,12 +129,30 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
 
 ponder.on("Asset:CreatorFeeClaimed", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
+  const assetAddress = event.log.address.toLowerCase();
+  const subscriber = event.args.subscriber;
+  const claimedAtNonce = event.args.claimedAtNonce;
+
+  // FK is best-effort: rows can be hard-deleted on revoke of future nonces
+  // or SubscriptionRemoved, in which case we keep the claim row but leave
+  // subscriptionId null instead of failing the insert.
+  const subscriptionId = getSubscriptionId(chainId, assetAddress, subscriber, claimedAtNonce);
+  const subscriptionRows = await context.db.sql
+    .select({ id: Subscription.id })
+    .from(Subscription)
+    .where(eq(Subscription.id, subscriptionId))
+    .limit(1);
+  const linkedSubscriptionId = subscriptionRows.length > 0 ? subscriptionId : null;
+
   await context.db.insert(Asset_CreatorFeeClaimed).values({
     id: getEventId(event, chainId),
     chainId: chainId,
-    subscriber: event.args.subscriber,
+    subscriber: subscriber,
     amount: event.args.amount,
-    assetAddress: event.log.address.toLowerCase(),
+    claimedAtTimestamp: event.args.claimedAtTimestamp,
+    claimedAtNonce: claimedAtNonce,
+    subscriptionId: linkedSubscriptionId,
+    assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });

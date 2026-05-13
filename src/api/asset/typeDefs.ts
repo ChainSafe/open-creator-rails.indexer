@@ -40,11 +40,16 @@ export const typeDefs = /* GraphQL */ `
   type Asset_CreatorFeeClaimed {
     # Stored Fields
     id: String! chainId: Int! subscriber: String! amount: BigInt!
+    claimedAtTimestamp: BigInt! claimedAtNonce: BigInt! subscriptionId: String
     assetAddress: Address! blockNumber: BigInt! blockTimestamp: BigInt!
+
+    # Relations
+    subscription: Subscription
   }
   type Asset_CreatorFeeClaimedPage { items: [Asset_CreatorFeeClaimed!]! pageInfo: PageInfo! totalCount: Int! }
   input Asset_CreatorFeeClaimedFilter {
     id: String  chainId: Int  subscriber: String  assetAddress: Address
+    claimedAtNonce: BigInt  subscriptionId: String
   }
 
   type Asset_SubscriptionPriceUpdated {
