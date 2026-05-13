@@ -13,7 +13,8 @@
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc",
     "contracts:build": "cd open-creator-rails && forge build",
-    "sync": "node scripts/sync-abis.js"
+    "sync": "pnpm contracts:build && node scripts/sync-abis.js",
+    "sync:deployments": "node scripts/sync-deployments.js"
   },
   "dependencies": {
     "abitype": "^1.2.4",
