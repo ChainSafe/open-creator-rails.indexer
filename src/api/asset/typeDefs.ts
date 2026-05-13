@@ -3,8 +3,8 @@ export const typeDefs = /* GraphQL */ `
     # Stored Fields
     id: String! chainId: Int! assetId: String! address: String!
     registryId: String! registryAddress: String! owner: String!
-    subscriptionPrice: BigInt! tokenAddress: String!
-    
+    subscriptionPrice: BigInt! subscriptionDuration: BigInt! tokenAddress: String!
+
     # Relations
     registry: Registry
     subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage

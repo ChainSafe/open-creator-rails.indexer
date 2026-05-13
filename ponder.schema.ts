@@ -29,8 +29,9 @@ export const AssetEntity = onchainTable("asset_entity", (t) => ({
   registryId: t.text().notNull(),         // FK → RegistryEntity.id: `${chainId}_${registryAddress}`
   registryAddress: t.text().notNull(),
   owner: t.text().notNull(),
-  subscriptionPrice: t.bigint().notNull(), // Current price per second; updated by SubscriptionPriceUpdated
-  tokenAddress: t.text().notNull(),        // Immutable ERC-20 payment token set at deployment
+  subscriptionPrice: t.bigint().notNull(),    // Current price per subscription period; updated by SubscriptionPriceUpdated
+  subscriptionDuration: t.bigint().notNull(), // Immutable period length in seconds; subscriptions are whole multiples
+  tokenAddress: t.text().notNull(),           // Immutable ERC-20 payment token set at deployment
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   ownerIdx: index().on(table.owner),
@@ -54,7 +55,7 @@ export const Subscription = onchainTable("subscription", (t) => ({
   startTime: t.bigint().notNull(), // subscription start for this nonce
   endTime: t.bigint().notNull(),   // current expiry (updated by SubscriptionExtended; truncated on revoke/cancel)
   nonce: t.bigint().notNull(),              // on-chain nonce (increments when terms change)
-  subscriptionPrice: t.bigint().notNull(), // price per second at time of subscription
+  subscriptionPrice: t.bigint().notNull(), // price per subscription period at time of subscription
   registryFeeShare: t.bigint().notNull(),  // registry fee share at time of subscription
   isRevoked: t.boolean().notNull(),        // true only when owner explicitly revoked (SubscriptionRevoked)
 }), (table) => ({
@@ -97,6 +98,7 @@ export const AssetRegistry_AssetCreated = onchainTable("asset_registry_asset_cre
   assetId: t.text().notNull(),
   asset: t.text().notNull(),
   subscriptionPrice: t.bigint().notNull(),
+  subscriptionDuration: t.bigint().notNull(),
   tokenAddress: t.text().notNull(),
   owner: t.text().notNull(),
   registryAddress: t.text().notNull(),

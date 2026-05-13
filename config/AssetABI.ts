@@ -13,6 +13,11 @@ export const AssetABI = [
         "internalType": "uint256"
       },
       {
+        "name": "_subscriptionDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "_tokenAddress",
         "type": "address",
         "internalType": "address"
@@ -74,7 +79,7 @@ export const AssetABI = [
     ],
     "outputs": [
       {
-        "name": "claimed",
+        "name": "totalClaimedAmount",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -93,7 +98,17 @@ export const AssetABI = [
     ],
     "outputs": [
       {
-        "name": "registryFee",
+        "name": "claimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAtTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAtNonce",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -112,7 +127,7 @@ export const AssetABI = [
     ],
     "outputs": [
       {
-        "name": "claimed",
+        "name": "totalClaimedAmount",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -166,10 +181,23 @@ export const AssetABI = [
   },
   {
     "type": "function",
+    "name": "getSubscriptionDuration",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getSubscriptionPrice",
     "inputs": [
       {
-        "name": "duration",
+        "name": "count",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -177,6 +205,30 @@ export const AssetABI = [
     "outputs": [
       {
         "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSubscriptionPriceAndDuration",
+    "inputs": [
+      {
+        "name": "count",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "price",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "duration",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -281,7 +333,7 @@ export const AssetABI = [
         "internalType": "address"
       },
       {
-        "name": "value",
+        "name": "count",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -342,6 +394,18 @@ export const AssetABI = [
         "name": "amount",
         "type": "uint256",
         "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAtTimestamp",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAtNonce",
+        "type": "uint256",
+        "indexed": true,
         "internalType": "uint256"
       }
     ],
@@ -617,6 +681,11 @@ export const AssetABI = [
   {
     "type": "error",
     "name": "InvalidSpender",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSubscriptionDuration",
     "inputs": []
   },
   {
