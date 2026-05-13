@@ -1,13 +1,16 @@
 import { ponder } from "ponder:registry";
+import { and, eq } from "ponder";
 import {
   RegistryEntity,
   AssetEntity,
+  Subscription,
   AssetRegistry_AssetCreated,
   AssetRegistry_OwnershipTransferred,
   AssetRegistry_RegistryFeeShareUpdated,
   AssetRegistry_RegistryFeeClaimedBatch,
+  AssetRegistry_RegistryFeeClaimed,
 } from "../../ponder.schema";
-import { getEventId, getAssetEntityId, getRegistryEntityId } from "../utils";
+import { getEventId, getAssetEntityId, getRegistryEntityId, getSubscriptionId } from "../utils";
 
 ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
@@ -106,6 +109,52 @@ ponder.on("AssetRegistry:RegistryFeeClaimedBatch", async ({ event, context }) =>
     chainId: chainId,
     assetId: event.args.assetId,
     totalAmount: event.args.totalAmount,
+    registryAddress: event.log.address.toLowerCase(),
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+});
+
+ponder.on("AssetRegistry:RegistryFeeClaimed", async ({ event, context }) => {
+  const chainId = context.chain?.id as number;
+  const assetId = event.args.assetId;
+  const subscriber = event.args.subscriber;
+  const claimedAtNonce = event.args.claimedAtNonce;
+
+  // The event indexes by assetId (bytes32), but the AssetEntity primary key is
+  // chain-scoped on address. Resolve the address by joining through AssetEntity.
+  const assetRows = await context.db.sql
+    .select({ id: AssetEntity.id, address: AssetEntity.address })
+    .from(AssetEntity)
+    .where(and(eq(AssetEntity.chainId, chainId), eq(AssetEntity.assetId, assetId)))
+    .limit(1);
+  const assetRow = assetRows[0];
+
+  // Subscription rows can be hard-deleted on future-nonce revoke / SubscriptionRemoved.
+  // FK is best-effort: persist the claim either way, leave subscriptionId null when no row.
+  let linkedSubscriptionId: string | null = null;
+  if (assetRow) {
+    const candidateId = getSubscriptionId(chainId, assetRow.address, subscriber, claimedAtNonce);
+    const subscriptionRows = await context.db.sql
+      .select({ id: Subscription.id })
+      .from(Subscription)
+      .where(eq(Subscription.id, candidateId))
+      .limit(1);
+    if (subscriptionRows.length > 0) {
+      linkedSubscriptionId = candidateId;
+    }
+  }
+
+  await context.db.insert(AssetRegistry_RegistryFeeClaimed).values({
+    id: getEventId(event, chainId),
+    chainId: chainId,
+    assetId: assetId,
+    assetEntityId: assetRow?.id ?? null,
+    subscriber: subscriber,
+    amount: event.args.amount,
+    claimedAtTimestamp: event.args.claimedAtTimestamp,
+    claimedAtNonce: claimedAtNonce,
+    subscriptionId: linkedSubscriptionId,
     registryAddress: event.log.address.toLowerCase(),
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,

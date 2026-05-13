@@ -82,11 +82,13 @@ export const assetEntityRelations = relations(AssetEntity, ({ one, many }) => ({
   subscriptions: many(Subscription),
 }));
 
-export const subscriptionRelations = relations(Subscription, ({ one }) => ({
+export const subscriptionRelations = relations(Subscription, ({ one, many }) => ({
   asset: one(AssetEntity, {
     fields: [Subscription.assetId],
     references: [AssetEntity.id],
   }),
+  creatorFeeClaims: many(Asset_CreatorFeeClaimed),
+  registryFeeClaims: many(AssetRegistry_RegistryFeeClaimed),
 }));
 
 // --- Events (Immutable History) ---
@@ -205,10 +207,13 @@ export const Asset_SubscriptionExtended = onchainTable("asset_subscription_exten
 }));
 
 export const Asset_CreatorFeeClaimed = onchainTable("asset_creator_fee_claimed", (t) => ({
-  id: t.text().primaryKey(),   // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
+  id: t.text().primaryKey(),       // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
   chainId: t.integer().notNull(),
   subscriber: t.text().notNull(),
   amount: t.bigint().notNull(),
+  claimedAtTimestamp: t.bigint().notNull(), // Subscription block timestamp at claim, indexed on-chain
+  claimedAtNonce: t.bigint().notNull(),     // Subscription nonce the claim applies to
+  subscriptionId: t.text(),                 // FK → Subscription.id; null if matching subscription row was deleted
   assetAddress: t.text().notNull(),
   blockNumber: t.bigint().notNull(),
   blockTimestamp: t.bigint().notNull(),
@@ -216,6 +221,33 @@ export const Asset_CreatorFeeClaimed = onchainTable("asset_creator_fee_claimed",
   chainIdIdx: index().on(table.chainId),
   subscriberIdx: index().on(table.subscriber),
   assetAddressIdx: index().on(table.assetAddress),
+  claimedAtNonceIdx: index().on(table.claimedAtNonce),
+  subscriptionIdIdx: index().on(table.subscriptionId),
+}));
+
+// Per-claim event from the Registry contract. Distinct from
+// AssetRegistry_RegistryFeeClaimedBatch (aggregated summary across subscribers).
+export const AssetRegistry_RegistryFeeClaimed = onchainTable("asset_registry_registry_fee_claimed", (t) => ({
+  id: t.text().primaryKey(),                // Composite: `${chainId}-${event.transaction.hash}-${event.log.logIndex}`
+  chainId: t.integer().notNull(),
+  assetId: t.text().notNull(),              // bytes32 asset id from the event topic
+  assetEntityId: t.text(),                  // FK → AssetEntity.id (`${chainId}_${assetAddress}`); null if AssetEntity row missing
+  subscriber: t.text().notNull(),
+  amount: t.bigint().notNull(),
+  claimedAtTimestamp: t.bigint().notNull(),
+  claimedAtNonce: t.bigint().notNull(),
+  subscriptionId: t.text(),                 // FK → Subscription.id; null if matching subscription row was deleted
+  registryAddress: t.text().notNull(),
+  blockNumber: t.bigint().notNull(),
+  blockTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  chainIdIdx: index().on(table.chainId),
+  assetIdIdx: index().on(table.assetId),
+  assetEntityIdIdx: index().on(table.assetEntityId),
+  subscriberIdx: index().on(table.subscriber),
+  subscriptionIdIdx: index().on(table.subscriptionId),
+  registryAddressIdx: index().on(table.registryAddress),
+  claimedAtNonceIdx: index().on(table.claimedAtNonce),
 }));
 
 export const Asset_SubscriptionPriceUpdated = onchainTable("asset_subscription_price_updated", (t) => ({
@@ -286,4 +318,24 @@ export const Asset_OwnershipTransferred = onchainTable("asset_ownership_transfer
   previousOwnerIdx: index().on(table.previousOwner),
   newOwnerIdx: index().on(table.newOwner),
   assetAddressIdx: index().on(table.assetAddress),
+}));
+
+// Claim-event relations live at the bottom because they reference event
+// tables declared after the mutable-state relations block.
+export const assetCreatorFeeClaimedRelations = relations(Asset_CreatorFeeClaimed, ({ one }) => ({
+  subscription: one(Subscription, {
+    fields: [Asset_CreatorFeeClaimed.subscriptionId],
+    references: [Subscription.id],
+  }),
+}));
+
+export const assetRegistryRegistryFeeClaimedRelations = relations(AssetRegistry_RegistryFeeClaimed, ({ one }) => ({
+  asset: one(AssetEntity, {
+    fields: [AssetRegistry_RegistryFeeClaimed.assetEntityId],
+    references: [AssetEntity.id],
+  }),
+  subscription: one(Subscription, {
+    fields: [AssetRegistry_RegistryFeeClaimed.subscriptionId],
+    references: [Subscription.id],
+  }),
 }));

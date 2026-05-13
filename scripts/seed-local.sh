@@ -195,6 +195,32 @@ echo "  Re-subscribing (contract emits SubscriptionRenewed nonce=1)..."
 ./scripts/subscribe.sh 0 "local_asset_7" "sub1_asset7" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
 echo "  Sub1 re-subscribed to asset_7 (nonce 1 cleanly re-inserted in DB)"
 
+# ── Scenario: Creator + Registry fee claims ──────────────────────────────────
+# Exercises Asset.CreatorFeeClaimed and AssetRegistry.RegistryFeeClaimed so the
+# indexer's claim handlers (and their subscriptionId FK derivation) have live
+# events to consume.
+echo ""
+echo "=== Scenario: Fee Claims ==="
+
+echo "  Sub1 -> asset_8 (10m subscription)"
+./scripts/subscribe.sh 0 "local_asset_8" $SUB1_ID $SUB1_ADDR 600 $SUB1_PK > /dev/null
+
+# Advance Anvil time so the subscription accrues several periods worth of fees
+# before claiming. Without this, claimable would round down to ~0.
+cast rpc evm_increaseTime 300 --rpc-url $RPC_URL > /dev/null
+cast rpc evm_mine --rpc-url $RPC_URL > /dev/null
+
+ASSET8_ADDR=$(asset_addr "local_asset_8")
+ASSET8_ID=$(cast keccak "local_asset_8")
+
+echo "  Asset owner claims creator fee (-> CreatorFeeClaimed)"
+cast send $ASSET8_ADDR "claimCreatorFee(bytes32)" $SUB1_HASH \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+
+echo "  Registry owner claims registry fee (-> RegistryFeeClaimed)"
+cast send $REGISTRY_ADDR "claimRegistryFee(bytes32,bytes32)" $ASSET8_ID $SUB1_HASH \
+  --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
+
 echo ""
 echo "Local seeding complete!"
 echo "  - asset_1: 2 active subscribers, Sub1 extended"
@@ -204,3 +230,4 @@ echo "  - asset_4: Sub1 with price-change nonce chain"
 echo "  - asset_5: Sub1 revoked with a future nonce deleted"
 echo "  - asset_6: Sub2 cancelled with a future nonce deleted"
 echo "  - asset_7: Sub1 active+future cancelled then re-subscribed (nonce 1 re-inserted)"
+echo "  - asset_8: Sub1 subscribed, time advanced 5m, creator+registry fees claimed"
