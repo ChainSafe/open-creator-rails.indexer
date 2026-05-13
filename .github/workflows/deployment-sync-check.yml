@@ -1,0 +1,43 @@
+name: Deployment Sync Check
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "open-creator-rails"
+      - "config/deployments/**"
+      - "scripts/sync-deployments.js"
+
+jobs:
+  deployment-sync:
+    name: Check deployments are in sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Sync deployments
+        run: node scripts/sync-deployments.js
+
+      - name: Check for drift
+        run: |
+          if ! git diff --exit-code config/deployments/; then
+            echo ""
+            echo "❌ Deployment files are out of sync with the submodule."
+            echo ""
+            echo "Run this locally and commit the result:"
+            echo "  node scripts/sync-deployments.js"
+            exit 1
+          fi
+          echo "✅ Deployments are in sync."
