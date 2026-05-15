@@ -193,24 +193,36 @@ export async function refreshSubscriberClaimable(
 
   const result = computeClaimable(subs, duration, blockTimestamp, creator, registry);
 
+  // Persist the INPUT pointers, not the loop's advanced output.
+  //
+  // computeClaimable advances cNonce/cAt internally so it can sum fees across
+  // multiple nonces in one call — those advanced values are a loop variable,
+  // NOT a new claim point. The on-chain pointers (creatorClaimedAtTimestamps,
+  // creatorClaimedAtNonces) only move when an actual claim transaction runs,
+  // which surfaces here as CreatorFeeClaimed / RegistryFeeClaimed events
+  // applying pointerOverrides.
+  //
+  // Writing result.creator.* back would falsely "advance" the rollup pointer
+  // every refresh, so subsequent refreshes against the same asOf would
+  // compute count=0 and store fees=0, collapsing accrued claimable to zero.
   await context.db.insert(SubscriberClaimable).values({
     id: rollupId,
     chainId,
     assetEntityId,
     subscriber: args.subscriber,
-    creatorClaimedAtNonce: result.creator.claimedAtNonce,
-    creatorClaimedAtTimestamp: result.creator.claimedAtTimestamp,
-    registryClaimedAtNonce: result.registry.claimedAtNonce,
-    registryClaimedAtTimestamp: result.registry.claimedAtTimestamp,
+    creatorClaimedAtNonce: creator.claimedAtNonce,
+    creatorClaimedAtTimestamp: creator.claimedAtTimestamp,
+    registryClaimedAtNonce: registry.claimedAtNonce,
+    registryClaimedAtTimestamp: registry.claimedAtTimestamp,
     creatorFee: result.creatorFee,
     registryFee: result.registryFee,
     refreshedAtBlock: blockNumber,
     refreshedAtTimestamp: blockTimestamp,
   }).onConflictDoUpdate({
-    creatorClaimedAtNonce: result.creator.claimedAtNonce,
-    creatorClaimedAtTimestamp: result.creator.claimedAtTimestamp,
-    registryClaimedAtNonce: result.registry.claimedAtNonce,
-    registryClaimedAtTimestamp: result.registry.claimedAtTimestamp,
+    creatorClaimedAtNonce: creator.claimedAtNonce,
+    creatorClaimedAtTimestamp: creator.claimedAtTimestamp,
+    registryClaimedAtNonce: registry.claimedAtNonce,
+    registryClaimedAtTimestamp: registry.claimedAtTimestamp,
     creatorFee: result.creatorFee,
     registryFee: result.registryFee,
     refreshedAtBlock: blockNumber,
