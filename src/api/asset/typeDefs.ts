@@ -9,8 +9,31 @@ export const typeDefs = /* GraphQL */ `
     registry: Registry
     subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
     activeSubscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
+
+    # Claimable amounts computed from indexed Subscription rows + last claim
+    # pointers. "asOf" reflects the indexer's latest indexed block for this
+    # chain, not wall-clock; the on-chain numbers will continue accruing.
+    claimable(subscriber: String!): ClaimableAmount!
+    claimableTotal: ClaimableTotal!
   }
+
+  type ClaimableAmount {
+    creatorFee: BigInt!
+    registryFee: BigInt!
+    asOfTimestamp: BigInt!
+    asOfBlock: BigInt!
+  }
+
+  type ClaimableTotal {
+    creatorFee: BigInt!
+    registryFee: BigInt!
+    asOfTimestamp: BigInt!
+    asOfBlock: BigInt!
+    subscriberCount: Int!
+  }
+
   type AssetPage { items: [Asset!]! pageInfo: PageInfo! totalCount: Int! }
+  
   input AssetFilter {
     id: String  chainId: Int  assetId: String  address: Address
     registryId: String  registryAddress: Address  owner: Address

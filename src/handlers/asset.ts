@@ -14,6 +14,7 @@ import {
   Asset_OwnershipTransferred,
 } from "../../ponder.schema";
 import { getEventId, getAssetEntityId, getSubscriptionId } from "../utils";
+import { refreshSubscriberClaimable, deleteSubscriberClaimable } from "./claimable";
 
 ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
@@ -47,6 +48,14 @@ ponder.on("Asset:SubscriptionAdded", async ({ event, context }) => {
     subscriptionPrice: event.args.subscriptionPrice,
     registryFeeShare: event.args.registryFeeShare,
     assetAddress: assetAddress,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -88,6 +97,14 @@ ponder.on("Asset:SubscriptionRenewed", async ({ event, context }) => {
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
+
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
 });
 
 ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
@@ -125,6 +142,14 @@ ponder.on("Asset:SubscriptionExtended", async ({ event, context }) => {
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
+
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
 });
 
 ponder.on("Asset:CreatorFeeClaimed", async ({ event, context }) => {
@@ -155,6 +180,24 @@ ponder.on("Asset:CreatorFeeClaimed", async ({ event, context }) => {
     assetAddress: assetAddress,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
+  });
+
+  // Bump creator pointer to the event's values and let computeClaimable derive
+  // the post-claim creatorFee — which will be 0 because the contract just paid
+  // out everything claimable up to event.args.claimedAtTimestamp. Registry
+  // pointer is left as-is (the existing rollup row's value).
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+    pointerOverrides: {
+      creator: {
+        claimedAtNonce: event.args.claimedAtNonce,
+        claimedAtTimestamp: event.args.claimedAtTimestamp,
+      },
+    },
   });
 });
 
@@ -193,6 +236,14 @@ ponder.on("Asset:SubscriptionRevoked", async ({ event, context }) => {
     nonce: revokedNonce,
     endTime: event.args.endTime,
     assetAddress: assetAddress,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
+
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
@@ -235,6 +286,14 @@ ponder.on("Asset:SubscriptionCancelled", async ({ event, context }) => {
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
+
+  await refreshSubscriberClaimable(context, {
+    chainId,
+    assetAddress,
+    subscriber,
+    blockNumber: event.block.number,
+    blockTimestamp: event.block.timestamp,
+  });
 });
 
 ponder.on("Asset:SubscriptionRemoved", async ({ event, context }) => {
@@ -264,6 +323,10 @@ ponder.on("Asset:SubscriptionRemoved", async ({ event, context }) => {
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
+
+  // All subscription rows for this (asset, subscriber) were deleted above;
+  // drop the rollup row too so claimable correctly reports 0.
+  await deleteSubscriberClaimable(context, chainId, assetAddress, subscriber);
 });
 
 ponder.on("Asset:SubscriptionPriceUpdated", async ({ event, context }) => {

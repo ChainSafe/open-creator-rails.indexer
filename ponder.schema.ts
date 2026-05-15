@@ -68,6 +68,42 @@ export const Subscription = onchainTable("subscription", (t) => ({
   endTimeIdx: index().on(table.endTime),
 }));
 
+// One row per (asset, subscriber). Maintains a denormalized snapshot of the
+// claimable fee numbers + the on-chain "claimed up to" pointers, so the
+// `Asset.claimable(subscriber)` / `Asset.claimableTotal` GraphQL fields can be
+// resolved with O(1) reads instead of recomputing per-nonce math on every
+// query.
+//
+// Maintenance strategy (see src/handlers/claimable.ts):
+//   - Event-driven: every Asset subscription/claim event upserts this row with
+//     fees recomputed as of event.block.timestamp. Captures all state changes
+//     and the immediate-after-claim "0 claimable" state.
+//   - Block-interval: a periodic refresh handler (configured in ponder.config.ts)
+//     recomputes fees for every row using the latest block timestamp. Catches
+//     the case where time passes but no event fires (fees accrue when periods
+//     elapse, with or without on-chain activity).
+//
+// Staleness: at most one refresh interval. `refreshedAt*` fields surface that
+// freshness to API consumers via the ClaimableAmount.asOf* GraphQL fields.
+export const SubscriberClaimable = onchainTable("subscriber_claimable", (t) => ({
+  id: t.text().primaryKey(),                        // Composite: `${chainId}_${assetAddress}_${subscriber}` (== `${assetEntityId}_${subscriber}`)
+  chainId: t.integer().notNull(),
+  assetEntityId: t.text().notNull(),                // FK → AssetEntity.id
+  subscriber: t.text().notNull(),                   // bytes32 subscriber identity hash
+  creatorClaimedAtNonce: t.bigint().notNull(),      // mirrors on-chain creatorClaimedAtNonces[subscriber]
+  creatorClaimedAtTimestamp: t.bigint().notNull(),  // mirrors on-chain creatorClaimedAtTimestamps[subscriber]
+  registryClaimedAtNonce: t.bigint().notNull(),     // mirrors on-chain registryClaimedAtNonces[subscriber]
+  registryClaimedAtTimestamp: t.bigint().notNull(), // mirrors on-chain registryClaimedAtTimestamps[subscriber]
+  creatorFee: t.bigint().notNull(),                 // accrued creator-side claimable as of refreshedAt*
+  registryFee: t.bigint().notNull(),                // accrued registry-side claimable as of refreshedAt*
+  refreshedAtBlock: t.bigint().notNull(),
+  refreshedAtTimestamp: t.bigint().notNull(),
+}), (table) => ({
+  chainIdIdx: index().on(table.chainId),
+  assetEntityIdIdx: index().on(table.assetEntityId),
+  subscriberIdx: index().on(table.subscriber),
+}));
+
 // --- Relations ---
 
 export const registryEntityRelations = relations(RegistryEntity, ({ many }) => ({

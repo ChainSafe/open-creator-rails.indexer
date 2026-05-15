@@ -53,7 +53,7 @@ TOKEN_ADDR=$(jq -r '.["31337"]' deployments/token_addresses.json)
 LOCAL_SUBSCRIPTION_DURATION=1
 
 echo "3. Creating Assets..."
-for i in {1..8}; do
+for i in {1..9}; do
   price=$((i * 2))
   ./scripts/createAsset.sh 0 "local_asset_$i" $price $LOCAL_SUBSCRIPTION_DURATION $TOKEN_ADDR $DEPLOYER_ADDR $PRIVATE_KEY > /dev/null
   echo "  local_asset_$i (price: $price tokens/period, duration: ${LOCAL_SUBSCRIPTION_DURATION}s)"
@@ -221,6 +221,37 @@ echo "  Registry owner claims registry fee (-> RegistryFeeClaimed)"
 cast send $REGISTRY_ADDR "claimRegistryFee(bytes32,bytes32)" $ASSET8_ID $SUB1_HASH \
   --rpc-url $RPC_URL --private-key $PRIVATE_KEY > /dev/null
 
+# ── Scenario: Claimable amount visibility (no claim) ─────────────────────────
+# Establishes a known-state subscription whose claimable value can be queried
+# via /v2/graphql after the indexer catches up. Verifies the indexed
+# claimable resolver against on-chain truth without actually claiming —
+# leaves both fee pots intact so the consumer can read live numbers.
+echo ""
+echo "=== Scenario: Claimable (no claim) ==="
+
+echo "  Sub1 -> asset_9 (2000 periods)"
+./scripts/subscribe.sh 0 "local_asset_9" $SUB1_ID $SUB1_ADDR 2000 $SUB1_PK > /dev/null
+
+# Warp Anvil forward so exactly 1000 periods of fees have accrued, then mine
+# a block to commit the new timestamp. evm_mine is called twice to make sure
+# the post-warp block is the latest indexed head when Ponder catches up.
+cast rpc evm_increaseTime 1000 --rpc-url $RPC_URL > /dev/null
+cast rpc evm_mine --rpc-url $RPC_URL > /dev/null
+cast rpc evm_mine --rpc-url $RPC_URL > /dev/null
+
+ASSET9_PRICE=18                                  # i=9, price = i*2
+ASSET9_REGSHARE=80                               # first arg to deployRegistry.sh
+EXPECTED_FEE=$((1000 * ASSET9_PRICE))            # 18000
+EXPECTED_REG=$((EXPECTED_FEE * ASSET9_REGSHARE / 100))  # 14400
+EXPECTED_CRE=$((EXPECTED_FEE - EXPECTED_REG))    # 3600
+
+echo "  +1000s elapsed without claim. Expected claimable for Sub1 on asset_9:"
+echo "    creatorFee  = $EXPECTED_CRE"
+echo "    registryFee = $EXPECTED_REG"
+echo "  Verify via /v2/graphql once Ponder catches up:"
+echo "    { assets(where: { assetId: \"local_asset_9\" }) {"
+echo "        items { claimable(subscriber: \"$SUB1_HASH\") { creatorFee registryFee asOfBlock } } } }"
+
 echo ""
 echo "Local seeding complete!"
 echo "  - asset_1: 2 active subscribers, Sub1 extended"
@@ -231,3 +262,4 @@ echo "  - asset_5: Sub1 revoked with a future nonce deleted"
 echo "  - asset_6: Sub2 cancelled with a future nonce deleted"
 echo "  - asset_7: Sub1 active+future cancelled then re-subscribed (nonce 1 re-inserted)"
 echo "  - asset_8: Sub1 subscribed, time advanced 5m, creator+registry fees claimed"
+echo "  - asset_9: Sub1 subscribed, +1000s elapsed, no claim — verifies claimable resolver"
