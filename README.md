@@ -81,6 +81,42 @@ pnpm sync
 
 The `abi-sync-check` CI workflow enforces that `config/AssetABI.ts` and `config/AssetRegistryABI.ts` are always in sync with the submodule.
 
+## Releases
+
+Releases are automated via [release-please](https://github.com/googleapis/release-please) using [Conventional Commits](https://www.conventionalcommits.org/).
+
+**How it works:**
+
+1. Every push to `master` triggers `.github/workflows/release-please.yml`.
+2. The action maintains a rolling "release PR" titled `chore: release X.Y.Z` that accumulates the changelog from `feat:` / `fix:` / `chore:` commits since the last release.
+3. Merging that PR creates a tag (`vX.Y.Z`), generates `CHANGELOG.md`, and creates a GitHub Release.
+
+**Commit convention** (drives version bumps + changelog):
+
+| Prefix | Bump (pre-1.0) | Example |
+|---|---|---|
+| `feat:` / `feat(scope):` | minor | `feat(indexer): index new claimed event fields` |
+| `fix:` / `fix(scope):` | patch | `fix(handlers): correct revoke truncation` |
+| `chore:` / `docs:` / `refactor:` / `ci:` | no version bump, still in changelog | `chore(deps): bump viem from 2.48.4 to 2.48.8` |
+| `feat!:` or `BREAKING CHANGE:` footer | minor while pre-1.0 (would be major post-1.0) | `feat!: rename Asset.claimable → Asset.claimablePerSubscriber` |
+
+> The repo is still at `0.x`. release-please's `bump-minor-pre-major` keeps `feat:` bumping the minor digit (instead of major) until you set `1.0.0` in `.release-please-manifest.json`.
+
+**Releasing = deploying.** `deploy-indexer.yml` triggers on `push: tags: ['v*']`, so merging a release-please PR also deploys to Railway. Treat the release PR as the explicit "ship to prod" button.
+
+**One-time setup — `RELEASE_PLEASE_TOKEN` secret.** Tags created by GitHub Actions using the default `GITHUB_TOKEN` don't cascade to other tag-triggered workflows (GitHub blocks this to prevent loops). Without a PAT, release-please will tag the commit but `deploy-indexer.yml` won't fire — you'd need to manually `workflow_dispatch` the deploy.
+
+To make auto-deploy work end-to-end:
+
+1. Create a fine-grained PAT scoped to this repo with:
+   - **Contents**: Read & write
+   - **Pull requests**: Read & write
+2. Add it to repo secrets as `RELEASE_PLEASE_TOKEN`.
+
+The workflow falls back to `GITHUB_TOKEN` if the secret is unset, so it works either way — the secret only controls whether the deploy auto-triggers.
+
+**Hotfix release.** Land the `fix:` commit on `master` like any other commit. release-please will update its release PR with a patch-bump candidate; merge it to ship.
+
 ## Environment Variables
 
 | Variable | Chain | Description |
