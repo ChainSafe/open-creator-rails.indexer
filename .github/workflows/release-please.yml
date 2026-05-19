@@ -1,0 +1,41 @@
+name: Release Please
+
+# Maintains a rolling "release PR" on master driven by Conventional Commits.
+# When the release PR is merged, release-please tags the commit (e.g. v0.7.0),
+# writes CHANGELOG.md, bumps package.json version, and creates a GitHub Release.
+#
+# IMPORTANT: deploy-indexer.yml triggers on `push: tags: ['v*']`. Tags created
+# by this workflow's GITHUB_TOKEN do NOT cascade to downstream tag-triggered
+# workflows (GitHub Actions deliberately blocks workflow-from-workflow chains
+# under GITHUB_TOKEN to prevent infinite loops). To make merging a release-
+# please PR auto-deploy, configure RELEASE_PLEASE_TOKEN in repo secrets as a
+# fine-grained PAT (or GitHub App token) with:
+#   - contents: read & write   (for tag pushes + CHANGELOG commits)
+#   - pull-requests: read & write  (for maintaining the release PR)
+#
+# Without RELEASE_PLEASE_TOKEN set, the workflow still works end-to-end —
+# tagging, changelog, GitHub Release — but the resulting tag won't trigger
+# deploy-indexer.yml. Manually re-run deploy via workflow_dispatch in that
+# case, or set the secret.
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # Prefer a user-owned PAT if available (cascades to deploy-indexer.yml);
+          # fall back to the workflow-scoped GITHUB_TOKEN (PR + tag still created,
+          # but downstream workflows won't fire automatically).
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
