@@ -76,4 +76,24 @@ export default createConfig({
       }
     }
   },
+  blocks: {
+    // Periodic refresh of the SubscriberClaimable rollup. Catches the "time
+    // has passed but no event fired" case — fees accrue at every period
+    // boundary even without on-chain activity. Event handlers keep the rollup
+    // accurate for state changes; this fills the time-only gaps.
+    //
+    // Interval is per-chain: Sepolia = 7200 blocks (~24h at 12s blocks); local
+    // = 1 (every block). Local fires often because Anvil produces blocks only
+    // when txs are sent, so the seed naturally triggers refreshes.
+    ClaimableRefresh: {
+      chain: {
+        ...(process.env.PONDER_RPC_URL_11155111 ? {
+          sepolia: { startBlock: 10299077, interval: 7200 },
+        } : {}),
+        ...(process.env.PONDER_RPC_URL_31337 ? {
+          local: { startBlock: 0, interval: 1 },
+        } : {}),
+      },
+    },
+  },
 });

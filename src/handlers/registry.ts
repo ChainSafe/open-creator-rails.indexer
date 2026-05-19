@@ -11,6 +11,7 @@ import {
   AssetRegistry_RegistryFeeClaimed,
 } from "../../ponder.schema";
 import { getEventId, getAssetEntityId, getRegistryEntityId, getSubscriptionId } from "../utils";
+import { refreshSubscriberClaimable } from "./claimable";
 
 ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
@@ -159,4 +160,23 @@ ponder.on("AssetRegistry:RegistryFeeClaimed", async ({ event, context }) => {
     blockNumber: event.block.number,
     blockTimestamp: event.block.timestamp,
   });
+
+  // Bump registry pointer to the event's values; creator pointer is preserved
+  // from the existing rollup row. Post-claim registryFee will be 0 because the
+  // contract just paid out everything claimable up to event.args.claimedAtTimestamp.
+  if (assetRow) {
+    await refreshSubscriberClaimable(context, {
+      chainId,
+      assetAddress: assetRow.address,
+      subscriber,
+      blockNumber: event.block.number,
+      blockTimestamp: event.block.timestamp,
+      pointerOverrides: {
+        registry: {
+          claimedAtNonce: event.args.claimedAtNonce,
+          claimedAtTimestamp: event.args.claimedAtTimestamp,
+        },
+      },
+    });
+  }
 });

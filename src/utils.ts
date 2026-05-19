@@ -13,3 +13,7 @@ export const getAssetEntityId = (chainId: number, assetAddress: string) => {
 export const getSubscriptionId = (chainId: number, assetAddress: string, subscriber: string, nonce: bigint) => {
   return `${chainId}_${assetAddress.toLowerCase()}_${subscriber}_${nonce}`;
 };
+
+export const getSubscriberClaimableId = (chainId: number, assetAddress: string, subscriber: string) => {
+  return `${chainId}_${assetAddress.toLowerCase()}_${subscriber}`;
+};
