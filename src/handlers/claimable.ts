@@ -1,5 +1,5 @@
 import { ponder } from "ponder:registry";
-import { and, asc, eq, gt, gte } from "ponder";
+import { and, asc, eq, gt, gte, lte } from "ponder";
 import {
   AssetEntity,
   Subscription,
@@ -188,6 +188,10 @@ export async function refreshSubscriberClaimable(
       eq(Subscription.assetId, assetEntityId),
       eq(Subscription.subscriber, args.subscriber),
       gte(Subscription.nonce, minClaimedNonce),
+      // Drop future-dated nonces at the query level. computeClaimable's `break`
+      // already discards them, but no point fetching what we'd throw away.
+      // Uses the indexed startTime column.
+      lte(Subscription.startTime, blockTimestamp),
     ))
     .orderBy(asc(Subscription.nonce));
 
