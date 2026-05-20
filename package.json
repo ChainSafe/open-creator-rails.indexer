@@ -15,7 +15,8 @@
     "typecheck": "tsc",
     "contracts:build": "cd open-creator-rails && forge build",
     "sync": "pnpm contracts:build && node scripts/sync-abis.js",
-    "sync:deployments": "node scripts/sync-deployments.js"
+    "sync:deployments": "node scripts/sync-deployments.js",
+    "test": "vitest run"
   },
   "dependencies": {
     "abitype": "^1.2.4",
@@ -30,7 +31,8 @@
     "concurrently": "^9.2.1",
     "eslint": "^8.54.0",
     "eslint-config-ponder": "^0.16.6",
-    "typescript": "^5.3.2"
+    "typescript": "^5.3.2",
+    "vitest": "^3.0.0"
   },
   "engines": {
     "node": ">=18.14"
