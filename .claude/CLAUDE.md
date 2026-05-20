@@ -61,7 +61,7 @@ Schema → doc divergence is a recurring failure mode in this repo (the original
 
 ## Repo naming gotcha
 
-The GitHub repo is **`ChainSafe/open-creator-rails.indexer`** (with a dot). The local clone dir is `ocr-indexer`. GitHub redirects between names, so `gh` and `git` commands usually work with either, but error messages and Actions API URLs use the dot form. Don't "correct" the dot — it's intentional.
+The GitHub repo is **`ChainSafe/open-creator-rails.indexer`** (with a dot). GitHub redirects between names, so `gh` and `git` commands usually work with either, but error messages and Actions API URLs use the dot form. Don't "correct" the dot — it's intentional.
 
 ## Key commands
 
