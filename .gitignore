@@ -2,3 +2,6 @@ generated
 .ponder
 .env.local
 node_modules
+
+# Personal Claude Code overrides (.claude/settings.json stays committed)
+.claude/settings.local.json
