@@ -1,23 +1,23 @@
 import { getAbiItem  } from "viem";
 import { createConfig, factory } from "ponder";
 
-import { 
-  AssetABI, 
+import {
+  AssetABI,
   AssetRegistryABI,
-  sepoliaDeployments,
-  localDeployments
+  localRegistryAddresses,
+  sepoliaRegistryAddresses,
 } from "./config";
 
 // Extract the event strictly
-const AssetCreatedEvent = getAbiItem({ 
-  abi: AssetRegistryABI, 
-  name: "AssetCreated" 
+const AssetCreatedEvent = getAbiItem({
+  abi: AssetRegistryABI,
+  name: "AssetCreated"
 });
 
-const sepoliaRegistryAddresses = sepoliaDeployments.map((d: any) => d.address as `0x${string}`);
-const localRegistryAddresses = localDeployments.map((d: any) => d.address as `0x${string}`);
-
 export default createConfig({
+  ...(process.env.PONDER_PGLITE_DIR
+    ? { database: { kind: "pglite" as const, directory: process.env.PONDER_PGLITE_DIR } }
+    : {}),
   chains: {
     ...(process.env.PONDER_RPC_URL_11155111 ? {
       sepolia: {

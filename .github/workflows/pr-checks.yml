@@ -24,8 +24,14 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build contracts
+        run: pnpm contracts:build
 
       - name: Codegen
         run: pnpm codegen
@@ -35,3 +41,6 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
