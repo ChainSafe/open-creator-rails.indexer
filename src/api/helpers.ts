@@ -1,6 +1,6 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
-import { and, eq, gt, lt, asc, desc, count } from "ponder";
+import { and, eq, gt, lt, lte, asc, desc, count } from "ponder";
 import { GraphQLScalarType, Kind } from "graphql";
 
 // ── Scalars ───────────────────────────────────────────────────────────────────
@@ -51,6 +51,18 @@ export function activeSubscriptionConditions() {
     eq(schema.Subscription.isRevoked, false),
     lt(schema.Subscription.startTime, now),
     gt(schema.Subscription.endTime, now),
+  );
+}
+
+// Window of currently-active subscriptions whose `endTime` falls within `within`
+// seconds of "now" (request wall-clock). Window is (now, now + within].
+export function expiringConditions(within: bigint) {
+  const now = BigInt(Math.floor(Date.now() / 1000));
+  return and(
+    eq(schema.Subscription.isRevoked, false),
+    lt(schema.Subscription.startTime, now),
+    gt(schema.Subscription.endTime, now),
+    lte(schema.Subscription.endTime, now + within),
   );
 }
 

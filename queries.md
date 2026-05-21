@@ -14,6 +14,7 @@ This document is generated from the typeDefs in [`src/api/`](src/api/). For unde
   - [`assets`](#assets)
   - [`subscriptions`](#subscriptions)
   - [`activeSubscriptions`](#activesubscriptions)
+  - [`Asset.expiringSubscriptions`](#assetexpiringsubscriptions)
 - [Event log queries](#event-log-queries)
   - Registry-side: [`assetRegistry_AssetCreateds`](#assetregistry_assetcreateds) · [`assetRegistry_OwnershipTransferreds`](#assetregistry_ownershiptransferreds) · [`assetRegistry_RegistryFeeShareUpdateds`](#assetregistry_registryfeeshareupdateds) · [`assetRegistry_RegistryFeeClaimedBatchs`](#assetregistry_registryfeeclaimedbatchs) · [`assetRegistry_RegistryFeeClaimeds`](#assetregistry_registryfeeclaimeds)
   - Asset-side: [`asset_SubscriptionAddeds`](#asset_subscriptionaddeds) · [`asset_SubscriptionExtendeds`](#asset_subscriptionextendeds) · [`asset_SubscriptionRevokeds`](#asset_subscriptionrevokeds) · [`asset_SubscriptionCancelleds`](#asset_subscriptioncancelleds) · [`asset_SubscriptionPriceUpdateds`](#asset_subscriptionpriceupdateds) · [`asset_CreatorFeeClaimeds`](#asset_creatorfeeclaimeds) · [`asset_OwnershipTransferreds`](#asset_ownershiptransferreds)
@@ -119,6 +120,7 @@ One row per deployed `Asset` contract.
 | `registry` | `Registry` | Relation |
 | `subscriptions(...)` | `SubscriptionPage` | All subscription rows for this asset (per-nonce). Accepts `SubscriptionFilter` + pagination |
 | `activeSubscriptions(...)` | `SubscriptionPage` | Same shape, filtered to active (`startTime ≤ now < endTime`, not revoked) |
+| `expiringSubscriptions(within: BigInt!, ...)` | `SubscriptionPage` | Active rows whose `endTime` falls in `(now, now + within]`. Defaults to `orderBy: "endTime"`, `orderDirection: "asc"` |
 | `claimable(subscriber: String!)` | `ClaimableAmount!` | Per-subscriber claimable fees as of the indexer's latest indexed block |
 | `claimableTotal` | `ClaimableTotal!` | Aggregate claimable across all subscribers on this asset |
 
@@ -170,6 +172,29 @@ activeSubscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: 
 Same return shape as `subscriptions`, with an additional server-side filter: only rows where `startTime ≤ now < endTime && !isRevoked`. Use this for "who is currently subscribed" dashboards.
 
 The `now` reference is the API server's wall clock, not the latest indexed block.
+
+---
+
+### `Asset.expiringSubscriptions`
+
+```graphql
+type Asset {
+  expiringSubscriptions(
+    within: BigInt!
+    where: SubscriptionFilter
+    orderBy: String
+    orderDirection: String
+    limit: Int
+    offset: Int
+  ): SubscriptionPage
+}
+```
+
+Only exposed as a field on `Asset` (not on root `Query`). Returns the subset of `activeSubscriptions` whose `endTime` falls in the half-open window `(now, now + within]` — i.e. active rows that will expire within `within` seconds.
+
+`within` is required and is in seconds. Defaults to `orderBy: "endTime"`, `orderDirection: "asc"` when not supplied, so callers (e.g. an off-chain renewal scheduler) get the next-to-expire cohort first.
+
+The `now` reference is the API server's wall clock, not the latest indexed block — same caveat as `activeSubscriptions`.
 
 ---
 
@@ -390,6 +415,29 @@ Response:
       isActive
     }
     totalCount
+  }
+}
+```
+
+### Subscriptions on an asset that expire in the next 24 hours
+
+Useful as the work queue for an off-chain renewal scheduler.
+
+```graphql
+{
+  assets(where: { assetId: "local_asset_9" }) {
+    items {
+      expiringSubscriptions(within: "86400", limit: 100) {
+        items {
+          subscriber
+          payer
+          endTime
+          subscriptionPrice
+        }
+        pageInfo { hasNextPage }
+        totalCount
+      }
+    }
   }
 }
 ```
