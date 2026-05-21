@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.7.0...v0.8.0) (2026-05-21)
+
+
+### Features
+
+* **api:** add Asset.expiringSubscriptions(within) query ([#66](https://github.com/ChainSafe/open-creator-rails.indexer/issues/66)) ([1b37e91](https://github.com/ChainSafe/open-creator-rails.indexer/commit/1b37e91b346966be2e7e1cf578be1629b395397e))
+* **api:** add root Query.expiringSubscriptions(within) ([#68](https://github.com/ChainSafe/open-creator-rails.indexer/issues/68)) ([a5a587a](https://github.com/ChainSafe/open-creator-rails.indexer/commit/a5a587a8996c0b9dd80ef8672bfa3f0e2543037f))
+* **test:** add vitest e2e harness for indexer + /v2/graphql ([#60](https://github.com/ChainSafe/open-creator-rails.indexer/issues/60)) ([541ca15](https://github.com/ChainSafe/open-creator-rails.indexer/commit/541ca155ba987956ea45c5f1a33bc61dedc8db03))
+
 ## [0.7.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.6.0...v0.7.0) (2026-05-19)
 
 
