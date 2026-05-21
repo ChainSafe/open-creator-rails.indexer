@@ -21,5 +21,6 @@ export const typeDefs = /* GraphQL */ `
   extend type Query {
     subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage!
     activeSubscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage!
+    expiringSubscriptions(within: BigInt!, where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage!
   }
 `;
