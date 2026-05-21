@@ -1,7 +1,7 @@
 import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { eq, sql } from "ponder";
-import { byId, queryList, activeSubscriptionConditions } from "../helpers.js";
+import { byId, queryList, activeSubscriptionConditions, expiringConditions } from "../helpers.js";
 import { getAssetEntityId, getSubscriberClaimableId } from "../../utils";
 
 // Claimable resolvers read from the SubscriberClaimable rollup maintained by
@@ -73,6 +73,16 @@ export const resolvers = {
       queryList(schema.Subscription, { ...a.where, assetId: parent.id }, a.orderBy, a.orderDirection, a.limit, a.offset),
     activeSubscriptions: (parent: any, a: any) =>
       queryList(schema.Subscription, { ...a.where, assetId: parent.id }, a.orderBy, a.orderDirection, a.limit, a.offset, activeSubscriptionConditions()),
+    expiringSubscriptions: (parent: any, a: any) =>
+      queryList(
+        schema.Subscription,
+        { ...a.where, assetId: parent.id },
+        a.orderBy ?? "endTime",
+        a.orderDirection ?? "asc",
+        a.limit,
+        a.offset,
+        expiringConditions(BigInt(a.within)),
+      ),
     claimable:      (parent: any, a: any) => claimableForSubscriber(parent.chainId, parent.address, a.subscriber),
     claimableTotal: (parent: any) => claimableForAsset(parent.chainId, parent.address),
   },

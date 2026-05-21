@@ -9,6 +9,7 @@ export const typeDefs = /* GraphQL */ `
     registry: Registry
     subscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
     activeSubscriptions(where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
+    expiringSubscriptions(within: BigInt!, where: SubscriptionFilter, orderBy: String, orderDirection: String, limit: Int, offset: Int): SubscriptionPage
 
     # Claimable amounts computed from indexed Subscription rows + last claim
     # pointers. "asOf" reflects the indexer's latest indexed block for this
