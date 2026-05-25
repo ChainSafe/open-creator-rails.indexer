@@ -24,7 +24,7 @@
     "graphql-yoga": "^5.21.0",
     "hono": "^4.12.23",
     "ponder": "^0.16.6",
-    "viem": "^2.48.8"
+    "viem": "^2.51.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
