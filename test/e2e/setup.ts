@@ -9,7 +9,7 @@ import {
   makeClients,
   type BaseDeployments,
   type Clients,
-} from "./seed/scenarios.js";
+} from "./helpers/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "../..");

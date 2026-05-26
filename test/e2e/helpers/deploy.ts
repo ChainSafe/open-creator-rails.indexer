@@ -1,21 +1,13 @@
 import {
-  createPublicClient,
-  createWalletClient,
-  http,
   keccak256,
   parseEventLogs,
   toHex,
   type Address,
   type Hex,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { loadArtifact, type ContractName } from "./artifacts.js";
-
-// Anvil's first default account. Matches seed-local.sh so debugging
-// behavior stays parallel across the shell-seeded and JS-seeded flows.
-export const DEPLOYER_PRIVATE_KEY: Hex =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+import type { Clients } from "./clients.js";
 
 // Base infra deployed once per test world. Tests build on this — create assets,
 // subscriptions, etc. — as needed for their scenario.
@@ -35,20 +27,6 @@ export interface CreatedAsset {
   tokenAddress: Address;
   owner: Address;
 }
-
-export function makeClients(rpcUrl: string) {
-  const account = privateKeyToAccount(DEPLOYER_PRIVATE_KEY);
-  const transport = http(rpcUrl);
-  const publicClient = createPublicClient({ chain: foundry, transport });
-  const walletClient = createWalletClient({
-    chain: foundry,
-    transport,
-    account,
-  });
-  return { publicClient, walletClient, deployer: account.address };
-}
-
-export type Clients = ReturnType<typeof makeClients>;
 
 async function deployContract(
   clients: Clients,

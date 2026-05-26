@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createAsset } from "./seed/scenarios.js";
+import { createAsset } from "./helpers/index.js";
 import { setupWorld, type World } from "./setup.js";
 
 interface GraphQLResponse<T> {
