@@ -130,14 +130,24 @@ cancel_subscription "sub2_asset2" $SUB2_PK $ASSET2_ADDR
 echo "  Subscriber cancelled Sub2 from asset_2 (isRevoked=false, endTime truncated)"
 
 # ── Scenario: Re-subscribe after cancel ───────────────────────────────────────
+# Naturally, cancelling a single active subscription only truncates nonce 0's
+# endTime — the subscriber stays in the on-chain `subscribers` set, so a
+# subsequent subscribe chains a NEW nonce (nonce 1) instead of replaying nonce
+# 0. The exception is when subscribe + cancel land in the same Anvil block
+# (their block.timestamp matches subscribe's startTime, triggering the
+# "future-only" delete branch and firing SubscriptionRemoved); that path resets
+# nonces back to 0. With default Anvil + fast cast send calls, identical
+# timestamps are common — so this scenario can produce either outcome depending
+# on wall-clock timing. The e2e tests pin behavior by calling
+# anvil_setBlockTimestampInterval(1).
 echo ""
-echo "=== Scenario: Re-subscribe After Cancel (nonce reuse) ==="
+echo "=== Scenario: Re-subscribe After Cancel ==="
 
 echo "  Sub1 -> asset_3 (30m)"
 ASSET3_ADDR=$(asset_addr "local_asset_3")
 ./scripts/subscribe.sh 0 "local_asset_3" "sub1_asset3" $SUB1_ADDR 1800 $SUB1_PK > /dev/null
 cancel_subscription "sub1_asset3" $SUB1_PK $ASSET3_ADDR
-echo "  Cancelled, re-subscribing (contract reuses nonce 0)..."
+echo "  Cancelled, re-subscribing..."
 ./scripts/subscribe.sh 0 "local_asset_3" "sub1_asset3" $SUB1_ADDR 3600 $SUB1_PK > /dev/null
 echo "  Sub1 re-subscribed to asset_3"
 

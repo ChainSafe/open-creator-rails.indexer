@@ -6,16 +6,12 @@ import { onchainTable, index, relations } from "ponder";
 // OpenZeppelin's Ownable constructor (Ownable(msg.sender)) when the registry is
 // deployed. AssetRegistry has no dedicated "RegistryCreated" event, so this is
 // the earliest signal we have that a registry exists on-chain.
-//
-// Consequence: `owner` is populated on deploy, but `registryFeeShare` remains
-// null until updateRegistryFeeShare() is called — the constructor sets the
-// initial fee share without emitting RegistryFeeShareUpdated.
 export const RegistryEntity = onchainTable("registry_entity", (t) => ({
   id: t.text().primaryKey(),             // Composite: `${chainId}_${registryAddress}`
   chainId: t.integer().notNull(),
   address: t.text().notNull(),
-  owner: t.text(),                       // null until OwnershipTransferred is seen
-  registryFeeShare: t.bigint(),          // null until RegistryFeeShareUpdated is seen
+  owner: t.text(),                       // populated on deploy via OwnershipTransferred
+  registryFeeShare: t.bigint(),          // populated on deploy via RegistryFeeShareUpdated
 }), (table) => ({
   chainIdIdx: index().on(table.chainId),
   ownerIdx: index().on(table.owner),

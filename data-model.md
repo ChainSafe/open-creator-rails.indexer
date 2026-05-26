@@ -11,8 +11,8 @@ One row per `AssetRegistry` contract.
 - `id`: `${chainId}_${registryAddress}` (address lowercased).
 - `chainId`: chain id.
 - `address`: registry contract address (lowercased).
-- `owner`: current registry owner — null until the constructor's `OwnershipTransferred` event is seen.
-- `registryFeeShare`: percentage (0–100) the registry takes from each claim — null until `RegistryFeeShareUpdated` is seen (the constructor sets the initial share without emitting an event).
+- `owner`: current registry owner — populated on deploy when `OwnershipTransferred` fires from `Ownable(msg.sender)`. Updated by subsequent transfers.
+- `registryFeeShare`: percentage (0–100) the registry takes from each claim — populated on deploy when the constructor emits `RegistryFeeShareUpdated(initial)`. Updated by `updateRegistryFeeShare()`.
 
 ### `AssetEntity`
 
