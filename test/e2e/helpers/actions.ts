@@ -43,14 +43,18 @@ interface SubscribeOptions {
 // Builds + signs an EIP-2612 permit on the asset's payment token, then calls
 // AssetRegistry.subscribe. Mirrors the seed-local.sh subscribe.sh flow but
 // reproduces the signing in TS instead of shelling into a Forge script.
-export async function subscribe(
+//
+// Dispatches the tx WITHOUT waiting for the receipt — returns the hash so the
+// caller can compose it into mineBatched()'s same-block batches. The wait-style
+// `subscribe()` wrapper below is the default for regular tests.
+export async function dispatchSubscribe(
   clients: Clients,
   registry: Address,
   asset: CreatedAsset,
   sub: Subscriber,
   count: number | bigint,
   options: SubscribeOptions = {},
-): Promise<void> {
+): Promise<Hex> {
   const payer = options.payer ?? sub;
   const countBig = BigInt(count);
 
@@ -122,7 +126,7 @@ export async function subscribe(
     throw new Error("parseSignature returned undefined v");
   }
 
-  const hash = await clients.walletClient.writeContract({
+  return clients.walletClient.writeContract({
     address: registry,
     abi: registryAbi,
     functionName: "subscribe",
@@ -140,6 +144,17 @@ export async function subscribe(
     account: clients.walletClient.account!,
     chain: foundry,
   });
+}
+
+export async function subscribe(
+  clients: Clients,
+  registry: Address,
+  asset: CreatedAsset,
+  sub: Subscriber,
+  count: number | bigint,
+  options: SubscribeOptions = {},
+): Promise<void> {
+  const hash = await dispatchSubscribe(clients, registry, asset, sub, count, options);
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
@@ -175,13 +190,13 @@ export async function cancelSubscription(
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
-export async function revokeSubscription(
+export async function dispatchRevokeSubscription(
   clients: Clients,
   asset: Address,
   sub: Subscriber,
-): Promise<void> {
+): Promise<Hex> {
   const { abi } = loadArtifact("Asset");
-  const hash = await clients.walletClient.writeContract({
+  return clients.walletClient.writeContract({
     address: asset,
     abi,
     functionName: "revokeSubscription",
@@ -189,6 +204,14 @@ export async function revokeSubscription(
     account: clients.walletClient.account!,
     chain: foundry,
   });
+}
+
+export async function revokeSubscription(
+  clients: Clients,
+  asset: Address,
+  sub: Subscriber,
+): Promise<void> {
+  const hash = await dispatchRevokeSubscription(clients, asset, sub);
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
@@ -238,6 +261,57 @@ export async function claimRegistryFee(
     abi,
     functionName: "claimRegistryFee",
     args: [asset.assetIdHash, sub.hash],
+    account: clients.walletClient.account!,
+    chain: foundry,
+  });
+  await clients.publicClient.waitForTransactionReceipt({ hash });
+}
+
+export async function updateRegistryFeeShare(
+  clients: Clients,
+  registry: Address,
+  newShare: number | bigint,
+): Promise<void> {
+  const { abi } = loadArtifact("AssetRegistry");
+  const hash = await clients.walletClient.writeContract({
+    address: registry,
+    abi,
+    functionName: "updateRegistryFeeShare",
+    args: [BigInt(newShare)],
+    account: clients.walletClient.account!,
+    chain: foundry,
+  });
+  await clients.publicClient.waitForTransactionReceipt({ hash });
+}
+
+export async function transferAssetOwnership(
+  clients: Clients,
+  asset: Address,
+  newOwner: Address,
+): Promise<void> {
+  const { abi } = loadArtifact("Asset");
+  const hash = await clients.walletClient.writeContract({
+    address: asset,
+    abi,
+    functionName: "transferOwnership",
+    args: [newOwner],
+    account: clients.walletClient.account!,
+    chain: foundry,
+  });
+  await clients.publicClient.waitForTransactionReceipt({ hash });
+}
+
+export async function transferRegistryOwnership(
+  clients: Clients,
+  registry: Address,
+  newOwner: Address,
+): Promise<void> {
+  const { abi } = loadArtifact("AssetRegistry");
+  const hash = await clients.walletClient.writeContract({
+    address: registry,
+    abi,
+    functionName: "transferOwnership",
+    args: [newOwner],
     account: clients.walletClient.account!,
     chain: foundry,
   });

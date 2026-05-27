@@ -4,6 +4,7 @@ import { createConnection, createServer } from "node:net";
 import { dirname, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import type { Hex, TransactionReceipt } from "viem";
 import {
   baseSeed,
   makeClients,
@@ -40,6 +41,12 @@ export interface World {
   // head minus FINALITY_BLOCKS — i.e. everything currently on chain that could
   // be finalized is reflected in the DB. Call after on-chain work + mine().
   waitForIndex: (timeoutMs?: number) => Promise<void>;
+  // Dispatches multiple txs into the same Anvil block. Disables auto-mining,
+  // runs the callback (which dispatches txs WITHOUT waiting for receipts and
+  // returns their hashes), mines a single block, then waits for receipts.
+  mineBatched: (
+    send: () => Promise<readonly Hex[]>,
+  ) => Promise<TransactionReceipt[]>;
   teardown: () => Promise<void>;
 }
 
@@ -57,6 +64,8 @@ export async function setupWorld(): Promise<World> {
 
   try {
     await waitForRpc(ANVIL_RPC_URL, 15_000);
+
+    await anvilRpc(ANVIL_RPC_URL, "anvil_setBlockTimestampInterval", [1]);
 
     const clients = makeClients(ANVIL_RPC_URL);
     const base = await baseSeed(clients);
@@ -113,6 +122,7 @@ export async function setupWorld(): Promise<World> {
         mineEmptyBlocks(ANVIL_RPC_URL, count),
       waitForIndex: (timeoutMs = 30_000) =>
         waitForIndex(clients, ponderBaseUrl, timeoutMs),
+      mineBatched: (send) => mineBatched(clients, ANVIL_RPC_URL, send),
       teardown,
     };
   } catch (err) {
@@ -180,18 +190,50 @@ function pickFreePort(): Promise<number> {
 }
 
 async function mineEmptyBlocks(rpcUrl: string, count: number): Promise<void> {
+  await anvilRpc(rpcUrl, "anvil_mine", [`0x${count.toString(16)}`]);
+}
+
+async function anvilRpc(
+  rpcUrl: string,
+  method: string,
+  params: unknown[],
+): Promise<void> {
   const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "anvil_mine",
-      params: [`0x${count.toString(16)}`],
-    }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
   if (!res.ok) {
-    throw new Error(`anvil_mine failed: ${res.status} ${res.statusText}`);
+    throw new Error(`${method} failed: ${res.status} ${res.statusText}`);
+  }
+  // JSON-RPC errors come back as HTTP 200 with `{ error: { ... } }`. Surface
+  // them instead of silently no-oping.
+  const body = (await res.json()) as { error?: { message: string } };
+  if (body.error) {
+    throw new Error(`${method} failed: ${body.error.message}`);
+  }
+}
+
+// Dispatches multiple txs into the same Anvil block. The callback must dispatch
+// txs WITHOUT awaiting their receipts (helpers that do are unsuitable) and
+// return the hashes. `anvil_setAutomine(false)` keeps txs in the mempool until
+// the explicit anvil_mine call, then we restore automining and collect receipts.
+async function mineBatched(
+  clients: Clients,
+  rpcUrl: string,
+  send: () => Promise<readonly Hex[]>,
+): Promise<TransactionReceipt[]> {
+  await anvilRpc(rpcUrl, "anvil_setAutomine", [false]);
+  try {
+    const hashes = await send();
+    await anvilRpc(rpcUrl, "anvil_mine", ["0x1"]);
+    return Promise.all(
+      hashes.map((hash) =>
+        clients.publicClient.waitForTransactionReceipt({ hash }),
+      ),
+    );
+  } finally {
+    await anvilRpc(rpcUrl, "anvil_setAutomine", [true]);
   }
 }
 
