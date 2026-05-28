@@ -267,6 +267,47 @@ export async function claimRegistryFee(
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
+// Batches a creator-fee claim across multiple subscribers. Emits one
+// CreatorFeeClaimed per non-empty claim plus a single CreatorFeeClaimedBatch
+// summary event. Zero-claim subscribers are skipped by the contract.
+export async function claimCreatorFeeBatch(
+  clients: Clients,
+  asset: Address,
+  subs: readonly Subscriber[],
+): Promise<void> {
+  const { abi } = loadArtifact("Asset");
+  const hash = await clients.walletClient.writeContract({
+    address: asset,
+    abi,
+    functionName: "claimCreatorFee",
+    args: [subs.map((s) => s.hash)],
+    account: clients.walletClient.account!,
+    chain: foundry,
+  });
+  await clients.publicClient.waitForTransactionReceipt({ hash });
+}
+
+// Batches a registry-fee claim through the Registry. Emits one
+// RegistryFeeClaimed per non-empty claim (via Asset -> Registry callback) plus
+// one RegistryFeeClaimedBatch summary event.
+export async function claimRegistryFeeBatch(
+  clients: Clients,
+  registry: Address,
+  asset: CreatedAsset,
+  subs: readonly Subscriber[],
+): Promise<void> {
+  const { abi } = loadArtifact("AssetRegistry");
+  const hash = await clients.walletClient.writeContract({
+    address: registry,
+    abi,
+    functionName: "claimRegistryFee",
+    args: [asset.assetIdHash, subs.map((s) => s.hash)],
+    account: clients.walletClient.account!,
+    chain: foundry,
+  });
+  await clients.publicClient.waitForTransactionReceipt({ hash });
+}
+
 export async function updateRegistryFeeShare(
   clients: Clients,
   registry: Address,
