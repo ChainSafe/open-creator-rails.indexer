@@ -61,9 +61,13 @@ export async function setupWorld(): Promise<World> {
     stdio: ["ignore", "pipe", "pipe"],
   });
   attachLogPrefix(anvil, "anvil");
+  const anvilDied = watchSpawnFailure(anvil, "anvil", {
+    hint: "Install Foundry (https://book.getfoundry.sh/getting-started/installation) and ensure 'anvil' is on your PATH.",
+  });
 
   try {
-    await waitForRpc(ANVIL_RPC_URL, 15_000);
+    await Promise.race([waitForRpc(ANVIL_RPC_URL, 15_000), anvilDied.promise]);
+    anvilDied.dispose();
 
     await anvilRpc(ANVIL_RPC_URL, "anvil_setBlockTimestampInterval", [1]);
 
@@ -96,11 +100,19 @@ export async function setupWorld(): Promise<World> {
       },
     });
     attachLogPrefix(ponder, "ponder");
+    const ponderDied = watchSpawnFailure(ponder, "ponder", {
+      hint: "Did 'pnpm install' run? The binary should live at node_modules/.bin/ponder.",
+    });
 
     const ponderBaseUrl = `http://127.0.0.1:${ponderPort}`;
     try {
-      await waitForPonderReady(ponderBaseUrl, 90_000);
+      await Promise.race([
+        waitForPonderReady(ponderBaseUrl, 90_000),
+        ponderDied.promise,
+      ]);
+      ponderDied.dispose();
     } catch (err) {
+      ponderDied.dispose();
       await killProcess(ponder);
       await killProcess(anvil);
       throw err;
@@ -290,7 +302,7 @@ async function waitForIndex(
   ponderBaseUrl: string,
   timeoutMs: number,
 ): Promise<void> {
-  const head = await clients.publicClient.getBlockNumber();
+  const head = await clients.publicClient.getBlockNumber({ cacheTime: 0 });
   const target = Number(head) - FINALITY_BLOCKS;
   if (target <= 0) return; // nothing has been finalized yet.
 
@@ -313,6 +325,60 @@ async function waitForIndex(
   throw new Error(
     `Ponder did not index up to block ${target} within ${timeoutMs}ms (last indexed: ${lastIndexed ?? "unknown"})`,
   );
+}
+
+// Surfaces spawn / startup-time failures on a child process as a rejected
+// Promise so the caller can race it against a "wait for ready" check.
+// Without this, ENOENT (binary not found) reaches the test runner as a cryptic
+// unhandled exception and the failure mode that triggers is whichever wait
+// times out first (typically waitForRpc), which doesn't tell the user that the
+// real problem is a missing binary.
+//
+// The promise rejects on:
+//   - 'error' event (spawn-level failure, e.g. ENOENT)
+//   - 'exit' event with non-zero code (process started but died early)
+// Call .dispose() once the child is confirmed running so post-startup exits
+// don't trigger spurious rejections on a promise nobody awaits anymore.
+function watchSpawnFailure(
+  child: ChildProcess,
+  label: string,
+  options: { hint?: string } = {},
+): { promise: Promise<never>; dispose: () => void } {
+  let disposed = false;
+  let onError!: (err: NodeJS.ErrnoException) => void;
+  let onExit!: (code: number | null, signal: NodeJS.Signals | null) => void;
+  const promise = new Promise<never>((_, reject) => {
+    onError = (err) => {
+      if (disposed) return;
+      const base =
+        err.code === "ENOENT"
+          ? `Failed to spawn '${label}': binary not found on PATH (${err.message}).`
+          : `'${label}' process error: ${err.message}.`;
+      reject(new Error(options.hint ? `${base}\n  Hint: ${options.hint}` : base));
+    };
+    onExit = (code, signal) => {
+      if (disposed) return;
+      if (code !== null && code !== 0) {
+        reject(
+          new Error(
+            `'${label}' exited early with code ${code}${signal ? ` (signal: ${signal})` : ""}.`,
+          ),
+        );
+      } else if (signal) {
+        reject(new Error(`'${label}' was killed by signal ${signal} before becoming ready.`));
+      }
+    };
+    child.once("error", onError);
+    child.once("exit", onExit);
+  });
+  const dispose = () => {
+    disposed = true;
+    child.off("error", onError);
+    child.off("exit", onExit);
+  };
+  // Don't let a rejection from a disposed promise pop up as unhandled.
+  promise.catch(() => {});
+  return { promise, dispose };
 }
 
 async function killProcess(child: ChildProcess): Promise<void> {
