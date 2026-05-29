@@ -4,6 +4,7 @@ import { createConfig, factory } from "ponder";
 import {
   AssetABI,
   AssetRegistryABI,
+  baseSepoliaRegistryAddresses,
   localRegistryAddresses,
   sepoliaRegistryAddresses,
 } from "./config";
@@ -25,6 +26,12 @@ export default createConfig({
         rpc: process.env.PONDER_RPC_URL_11155111,
       }
     } : {}),
+    ...(process.env.PONDER_RPC_URL_84532 ? {
+      baseSepolia: {
+        id: 84532,
+        rpc: process.env.PONDER_RPC_URL_84532,
+      }
+    } : {}),
     ...(process.env.PONDER_RPC_URL_31337 ? {
       local: {
         id: 31337,
@@ -40,6 +47,12 @@ export default createConfig({
           sepolia: {
             address: sepoliaRegistryAddresses,
             startBlock: 10299077
+          }
+        } : {}),
+        ...(process.env.PONDER_RPC_URL_84532 ? {
+          baseSepolia: {
+            address: baseSepoliaRegistryAddresses,
+            startBlock: 18_800_000
           }
         } : {}),
         ...(process.env.PONDER_RPC_URL_31337 ? {
@@ -61,6 +74,16 @@ export default createConfig({
               parameter: "asset",
             }),
             startBlock: 10299077
+          }
+        } : {}),
+        ...(process.env.PONDER_RPC_URL_84532 ? {
+          baseSepolia: {
+            address: factory({
+              address: baseSepoliaRegistryAddresses,
+              event: AssetCreatedEvent,
+              parameter: "asset",
+            }),
+            startBlock: 18_800_000
           }
         } : {}),
         ...(process.env.PONDER_RPC_URL_31337 ? {
@@ -89,6 +112,9 @@ export default createConfig({
       chain: {
         ...(process.env.PONDER_RPC_URL_11155111 ? {
           sepolia: { startBlock: 10299077, interval: 7200 },
+        } : {}),
+        ...(process.env.PONDER_RPC_URL_84532 ? {
+          baseSepolia: { startBlock: 18_800_000, interval: 3600 },
         } : {}),
         ...(process.env.PONDER_RPC_URL_31337 ? {
           local: { startBlock: 0, interval: 1 },
