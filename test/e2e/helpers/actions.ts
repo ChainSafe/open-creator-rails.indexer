@@ -232,13 +232,13 @@ export async function setSubscriptionPrice(
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
-export async function claimCreatorFee(
+export async function dispatchClaimCreatorFee(
   clients: Clients,
   asset: Address,
   sub: Subscriber,
-): Promise<void> {
+): Promise<Hex> {
   const { abi } = loadArtifact("Asset");
-  const hash = await clients.walletClient.writeContract({
+  return clients.walletClient.writeContract({
     address: asset,
     abi,
     functionName: "claimCreatorFee",
@@ -246,6 +246,14 @@ export async function claimCreatorFee(
     account: clients.walletClient.account!,
     chain: foundry,
   });
+}
+
+export async function claimCreatorFee(
+  clients: Clients,
+  asset: Address,
+  sub: Subscriber,
+): Promise<void> {
+  const hash = await dispatchClaimCreatorFee(clients, asset, sub);
   await clients.publicClient.waitForTransactionReceipt({ hash });
 }
 
