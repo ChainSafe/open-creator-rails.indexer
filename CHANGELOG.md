@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.8.0...v0.9.0) (2026-06-01)
+
+
+### Features
+
+* activate Base Sepolia (84532) chain indexing ([#82](https://github.com/ChainSafe/open-creator-rails.indexer/issues/82)) ([775dd52](https://github.com/ChainSafe/open-creator-rails.indexer/commit/775dd52d5b8f64d5d88a5e5c6455739e4c591e27))
+
 ## [0.8.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.7.0...v0.8.0) (2026-05-21)
 
 
