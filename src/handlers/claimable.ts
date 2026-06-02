@@ -325,7 +325,19 @@ export async function refreshAllSubscriberClaimable(
 // ponder.config.ts. Fires on each chain's configured interval (Sepolia ~24h,
 // local every block) and brings every rollup row's fee values up to date with
 // the current block timestamp.
+//
+// Historical backfill optimization: skip refresh ticks whose block timestamp
+// trails wall-clock by more than HISTORICAL_BACKFILL_LAG_SEC. The rollup is
+// already kept correct by the event-driven path during backfill, and queries
+// can't reach the indexer until /ready fires post-backfill — so intermediate
+// "as of historical block N" values are never read. Skipping them saves
+// O(refresh_ticks × subscribers) work on chains with a long startBlock-to-head
+// distance.
+const HISTORICAL_BACKFILL_LAG_SEC = 300n; // 5 minutes
 ponder.on("ClaimableRefresh:block", async ({ event, context }) => {
+  const wallNow = BigInt(Math.floor(Date.now() / 1000));
+  if (wallNow - event.block.timestamp > HISTORICAL_BACKFILL_LAG_SEC) return;
+
   const chainId = context.chain?.id as number;
   await refreshAllSubscriberClaimable(context, {
     chainId,
