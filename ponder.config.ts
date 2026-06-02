@@ -83,7 +83,7 @@ export default createConfig({
               event: AssetCreatedEvent,
               parameter: "asset",
             }),
-            startBlock: 18_800_000
+            startBlock: 42281487
           }
         } : {}),
         ...(process.env.PONDER_RPC_URL_31337 ? {
