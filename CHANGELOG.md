@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.9.0...v0.9.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* base sepolia config ([#86](https://github.com/ChainSafe/open-creator-rails.indexer/issues/86)) ([23d3481](https://github.com/ChainSafe/open-creator-rails.indexer/commit/23d3481e47c014d70d9705eeb92cd0085a19d945))
+* **indexer:** skip ClaimableRefresh ticks during historical backfill ([#84](https://github.com/ChainSafe/open-creator-rails.indexer/issues/84)) ([3a84119](https://github.com/ChainSafe/open-creator-rails.indexer/commit/3a84119295f0274157143a695d323c2aa40b84c0))
+
 ## [0.9.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.8.0...v0.9.0) (2026-06-01)
 
 
