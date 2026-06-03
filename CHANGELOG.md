@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.10.0...v0.10.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* switch registry using latest contract ([#89](https://github.com/ChainSafe/open-creator-rails.indexer/issues/89)) ([8879b3e](https://github.com/ChainSafe/open-creator-rails.indexer/commit/8879b3ec3d5e388ce96e62815c015d02d3e7c616))
+
 ## [0.10.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.9.1...v0.10.0) (2026-06-03)
 
 
