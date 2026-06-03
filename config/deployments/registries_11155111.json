@@ -32,5 +32,11 @@
         "owner": "0x6DFcbA8bcc27595fD4782215fda1504c688b3d06"
       }
     ]
+  },
+  {
+    "address": "0x11B065cB626De43c1C4147E6cCBAbe6c38630816",
+    "registryFeeShare": 0,
+    "owner": "0x0555906a6DDd1026d6c09292cC1bb58c08bf2FBe",
+    "assets": []
   }
 ]
