@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.9.1...v0.10.0) (2026-06-03)
+
+
+### Features
+
+* new sepolia registry ([#87](https://github.com/ChainSafe/open-creator-rails.indexer/issues/87)) ([63aa2cf](https://github.com/ChainSafe/open-creator-rails.indexer/commit/63aa2cf1ba4794b22b975a5cfe065fdfbde2dde3))
+
 ## [0.9.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.9.0...v0.9.1) (2026-06-02)
 
 
