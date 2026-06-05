@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.10.1...v1.0.0) (2026-06-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* bump contarct from v0.8.0 to v1.0.0 ([#96](https://github.com/ChainSafe/open-creator-rails.indexer/issues/96))
+
+### Features
+
+* bump contarct from v0.8.0 to v1.0.0 ([#96](https://github.com/ChainSafe/open-creator-rails.indexer/issues/96)) ([86a0daf](https://github.com/ChainSafe/open-creator-rails.indexer/commit/86a0daf839fc6ce0cb822eb07e45b51dd8c520a5))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([1234f98](https://github.com/ChainSafe/open-creator-rails.indexer/commit/1234f983a4c44baef7a975fa9aa49f028f3254b3))
+
 ## [0.10.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.10.0...v0.10.1) (2026-06-03)
 
 
