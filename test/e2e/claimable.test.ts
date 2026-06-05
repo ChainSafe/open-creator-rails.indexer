@@ -3,6 +3,7 @@ import type { Address, Hex } from "viem";
 import {
   createAsset,
   mintTokens,
+  revokeSubscription,
   setSubscriptionPrice,
   subscribe,
   subscriber,
@@ -179,19 +180,49 @@ describe("claimable rollup", () => {
     expect(claim.registryFee).toBe(expected.registryFee.toString());
   });
 
-  it("fidelity: low-truncation case (price=18, share=80) — would drift under per-period truncation", async () => {
-    const { asset, sub } = await newScenario("low-trunc", { price: 18 });
+  it("fidelity: dust — a revoked subscription pays full periods + truncated partial-period dust", async () => {
+    const { asset, sub } = await newScenario("dust", {
+      price: 300,
+      duration: 7,
+      count: 100,
+    });
+    // Advance ~1.5 periods (≈11s with anvil_setBlockTimestampInterval=1), then
+    // revoke so endTime lands mid-period.
+    await world.mine(10);
+    await revokeSubscription(world.clients, asset.address, sub);
     await commitAndIndex();
 
     const subs = await queryActiveSubscriptions(world, sub.hash);
+    expect(subs).toHaveLength(1);
     const nonce0 = subs[0]!;
-    const claim = await queryClaimable(world, asset.address, sub.hash);
-    const periods = (BigInt(claim.asOfTimestamp) - BigInt(nonce0.startTime)) / 1n;
 
-    expect(periods).toBeGreaterThan(0n);
-    const expected = expectedClaimable(periods, 18n, 80n);
-    expect(claim.creatorFee).toBe(expected.creatorFee.toString());
-    expect(claim.registryFee).toBe(expected.registryFee.toString());
+    const start = BigInt(nonce0.startTime);
+    const end = BigInt(nonce0.endTime); // = revoke timestamp (truncated, non-aligned)
+    const price = BigInt(nonce0.subscriptionPrice);
+    const share = BigInt(nonce0.registryFeeShare);
+    const duration = 7n;
+
+    const window = end - start;
+    const count = window / duration;
+    const dustDuration = window - count * duration;
+
+    // Preconditions: the scenario must exercise BOTH a whole period and a
+    // genuinely truncating dust remainder, else it silently degrades into the
+    // plain fidelity case above.
+    expect(count).toBeGreaterThan(0n);
+    expect(dustDuration).toBeGreaterThan(0n);
+    expect((dustDuration * price) % duration).toBeGreaterThan(0n);
+
+    const dust = (dustDuration * price) / duration; // floor — mirrors the contract
+    const fee = count * price + dust;
+    const regPortion = (fee * share) / 100n;
+
+    const claim = await queryClaimable(world, asset.address, sub.hash);
+    // asOf is past the revoked endTime, so the window clamps to endTime and the
+    // dust branch (end === sub.endTime) fires.
+    expect(BigInt(claim.asOfTimestamp)).toBeGreaterThanOrEqual(end);
+    expect(claim.creatorFee).toBe((fee - regPortion).toString());
+    expect(claim.registryFee).toBe(regPortion.toString());
   });
 
   it("ClaimableRefresh: asOfBlock + values advance when blocks tick without any on-chain events", async () => {
@@ -235,7 +266,7 @@ describe("claimable rollup", () => {
     );
     // Nonce 0 spans count=5 (5 periods of 1s).
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 5);
-    await setSubscriptionPrice(world.clients, asset.address, 50);
+    await setSubscriptionPrice(world.clients, asset.address, 200);
     // Let nonce 0 fully expire before renewing so the new subscribe creates
     // nonce 1 (the chain logic extends in-place only when start == endTime).
     await world.mine(10);

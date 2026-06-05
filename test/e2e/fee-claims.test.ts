@@ -254,7 +254,7 @@ describe("fee claims", () => {
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 2);
     // Change price + let nonce 0 expire so the next subscribe truly RENEWS
     // (nonce++) instead of extending in place.
-    await setSubscriptionPrice(world.clients, asset.address, 50);
+    await setSubscriptionPrice(world.clients, asset.address, 200);
     await world.mine(5);
     // Renewal — nonce 1.
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 2);

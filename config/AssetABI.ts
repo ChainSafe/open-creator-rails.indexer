@@ -162,14 +162,8 @@ export const AssetABI = [
   },
   {
     "type": "function",
-    "name": "getSubscription",
-    "inputs": [
-      {
-        "name": "subscriber",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
+    "name": "getSubscriptionDuration",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -181,8 +175,14 @@ export const AssetABI = [
   },
   {
     "type": "function",
-    "name": "getSubscriptionDuration",
-    "inputs": [],
+    "name": "getSubscriptionExpiration",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -250,7 +250,45 @@ export const AssetABI = [
   },
   {
     "type": "function",
+    "name": "isSubscriberRevoked",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isSubscriptionActive",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isSubscriptionExpired",
     "inputs": [
       {
         "name": "subscriber",
@@ -375,6 +413,19 @@ export const AssetABI = [
         "name": "newOwner",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "unrevokeSubscription",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -637,6 +688,19 @@ export const AssetABI = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "SubscriptionUnrevoked",
+    "inputs": [
+      {
+        "name": "subscriber",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "ECDSAInvalidSignature",
     "inputs": []
@@ -690,12 +754,22 @@ export const AssetABI = [
   },
   {
     "type": "error",
+    "name": "InvalidSubscriptionPrice",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidTokenAddress",
     "inputs": []
   },
   {
     "type": "error",
     "name": "OnlyRegistryUnauthorizedAccount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyUnrevokedUnauthorizedSubscriber",
     "inputs": []
   },
   {
@@ -743,12 +817,22 @@ export const AssetABI = [
   },
   {
     "type": "error",
+    "name": "SubscriptionAlreadyRevoked",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SubscriptionCancellationFailed",
     "inputs": []
   },
   {
     "type": "error",
     "name": "SubscriptionNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SubscriptionNotRevoked",
     "inputs": []
   },
   {

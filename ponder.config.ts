@@ -71,7 +71,7 @@ export default createConfig({
             address: factory({
               address: sepoliaRegistryAddresses,
               event: AssetCreatedEvent,
-              parameter: "asset",
+              parameter: "assetAddress",
             }),
             startBlock: 10299077
           }
@@ -81,7 +81,7 @@ export default createConfig({
             address: factory({
               address: baseSepoliaRegistryAddresses,
               event: AssetCreatedEvent,
-              parameter: "asset",
+              parameter: "assetAddress",
             }),
             startBlock: 42281487
           }
@@ -91,7 +91,7 @@ export default createConfig({
             address: factory({
               address: localRegistryAddresses,
               event: AssetCreatedEvent,
-              parameter: "asset",
+              parameter: "assetAddress",
             }),
             startBlock: 0
           }

@@ -302,7 +302,7 @@ describe("GraphQL v2 surface", () => {
         world.clients,
         world.base.registryAddress,
         id,
-        1,
+        100,
         1,
         world.base.tokenAddress,
         world.base.deployer,

@@ -8,7 +8,7 @@ import {
 import { getAssetEntityId, getSubscriberClaimableId } from "../utils";
 
 // ── Pure math ────────────────────────────────────────────────────────────────
-// TypeScript port of Asset._claimable() from open-creator-rails (Asset.sol:289).
+// TypeScript port of Asset._claimable() from open-creator-rails (Asset.sol:320).
 // Pure over already-fetched inputs so the surrounding helpers can fetch in
 // whatever shape suits the call site (single-row event handler vs. bulk
 // block-interval refresh).
@@ -59,12 +59,22 @@ export function computeClaimable(
     if (sub.nonce >= cNonce && sub.endTime > cAt) {
       const start = sub.startTime > cAt ? sub.startTime : cAt;
       const end = sub.endTime < asOfTimestamp ? sub.endTime : asOfTimestamp;
-      const count = (end - start) / duration;
-      if (count > 0n) {
-        const fee = count * sub.subscriptionPrice;
+      const claimableDuration = end - start;
+      const count = claimableDuration / duration;
+      // Dust: once the subscription has fully ended (end clamps to endTime, not
+      // asOf), the contract also pays the partial-period remainder (Asset.sol:360).
+      // Mid-period windows accrue whole periods only.
+      let dust = 0n;
+      if (end === sub.endTime) {
+        dust = ((claimableDuration - count * duration) * sub.subscriptionPrice) / duration;
+      }
+      if (count > 0n || dust > 0n) {
+        const fee = count * sub.subscriptionPrice + dust;
         const regPortion = (fee * sub.registryFeeShare) / 100n;
         creatorFee += fee - regPortion;
         cNonce = sub.nonce;
+        // Pointer advances to the last full-period boundary only; dust is paid
+        // but does not move the pointer (Asset.sol:382).
         cAt = start + count * duration;
       }
     }
@@ -72,9 +82,14 @@ export function computeClaimable(
     if (sub.nonce >= rNonce && sub.endTime > rAt) {
       const start = sub.startTime > rAt ? sub.startTime : rAt;
       const end = sub.endTime < asOfTimestamp ? sub.endTime : asOfTimestamp;
-      const count = (end - start) / duration;
-      if (count > 0n) {
-        const fee = count * sub.subscriptionPrice;
+      const claimableDuration = end - start;
+      const count = claimableDuration / duration;
+      let dust = 0n;
+      if (end === sub.endTime) {
+        dust = ((claimableDuration - count * duration) * sub.subscriptionPrice) / duration;
+      }
+      if (count > 0n || dust > 0n) {
+        const fee = count * sub.subscriptionPrice + dust;
         const regPortion = (fee * sub.registryFeeShare) / 100n;
         registryFee += regPortion;
         rNonce = sub.nonce;

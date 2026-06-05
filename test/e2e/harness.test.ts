@@ -62,7 +62,7 @@ describe("e2e smoke", () => {
       world.clients,
       world.base.registryAddress,
       "local_asset_1",
-      2,
+      100,
       1,
       world.base.tokenAddress,
       world.base.deployer,
