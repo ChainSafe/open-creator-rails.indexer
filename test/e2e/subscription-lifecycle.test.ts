@@ -74,7 +74,7 @@ describe("subscription lifecycle", () => {
       world.clients,
       world.base.registryAddress,
       `lifecycle_${id}`,
-      opts.price ?? 2,
+      opts.price ?? 100,
       opts.duration ?? 1,
       world.base.tokenAddress,
       world.base.deployer,
@@ -127,7 +127,7 @@ describe("subscription lifecycle", () => {
     expect(subs.totalCount).toBe(1);
     expect(subs.items[0]!.nonce).toBe("0");
     expect(subs.items[0]!.isRevoked).toBe(false);
-    expect(subs.items[0]!.subscriptionPrice).toBe("2");
+    expect(subs.items[0]!.subscriptionPrice).toBe("100");
   });
 
   it("SubscriptionExtended advances endTime in place at the same nonce", async () => {
@@ -151,15 +151,15 @@ describe("subscription lifecycle", () => {
     const { asset, sub } = await newScenario("renewed");
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 5);
     // Change price — next subscribe will chain a new nonce (terms differ).
-    await setSubscriptionPrice(world.clients, asset.address, 99);
+    await setSubscriptionPrice(world.clients, asset.address, 300);
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 5);
     await commitAndIndex();
 
     const subs = await querySubs(sub.hash);
     expect(subs.totalCount).toBe(2);
     expect(subs.items.map((s) => s.nonce)).toEqual(["0", "1"]);
-    expect(subs.items[0]!.subscriptionPrice).toBe("2");
-    expect(subs.items[1]!.subscriptionPrice).toBe("99");
+    expect(subs.items[0]!.subscriptionPrice).toBe("100");
+    expect(subs.items[1]!.subscriptionPrice).toBe("300");
     // Nonce 1's startTime must equal nonce 0's endTime (chained).
     expect(subs.items[1]!.startTime).toBe(subs.items[0]!.endTime);
   });
@@ -197,7 +197,7 @@ describe("subscription lifecycle", () => {
   it("Revoke with a chained future nonce deletes the future nonce row", async () => {
     const { asset, sub } = await newScenario("revoke-future");
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
-    await setSubscriptionPrice(world.clients, asset.address, 50);
+    await setSubscriptionPrice(world.clients, asset.address, 200);
     // Nonce 1 chains into the future of nonce 0's endTime.
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
     await revokeSubscription(world.clients, asset.address, sub);
@@ -212,7 +212,7 @@ describe("subscription lifecycle", () => {
   it("Cancel with a chained future nonce deletes the future nonce row", async () => {
     const { asset, sub } = await newScenario("cancel-future");
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
-    await setSubscriptionPrice(world.clients, asset.address, 50);
+    await setSubscriptionPrice(world.clients, asset.address, 200);
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
     await cancelSubscription(world.clients, asset.address, sub);
     await commitAndIndex();
@@ -268,7 +268,7 @@ describe("subscription lifecycle", () => {
   it("Active + future cancel then re-subscribe restores nonce 1 (compound scenario)", async () => {
     const { asset, sub } = await newScenario("active-future-resubscribe");
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
-    await setSubscriptionPrice(world.clients, asset.address, 50);
+    await setSubscriptionPrice(world.clients, asset.address, 200);
     // Nonce 1 future.
     await subscribe(world.clients, world.base.registryAddress, asset, sub, 100);
     // Cancel: nonce 1 deleted, nonce 0 truncated (still in DB, isRevoked=false).
@@ -282,6 +282,6 @@ describe("subscription lifecycle", () => {
     expect(subs.totalCount).toBe(2);
     expect(subs.items.map((s) => s.nonce)).toEqual(["0", "1"]);
     expect(subs.items[0]!.isRevoked).toBe(false);
-    expect(subs.items[1]!.subscriptionPrice).toBe("50");
+    expect(subs.items[1]!.subscriptionPrice).toBe("200");
   });
 });

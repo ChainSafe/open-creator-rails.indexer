@@ -119,16 +119,16 @@ describe("entity metadata", () => {
       world.clients,
       world.base.registryAddress,
       "metadata_price",
-      2,
+      100,
       1,
       world.base.tokenAddress,
       world.base.deployer,
     );
-    await setSubscriptionPrice(world.clients, asset.address, 99);
+    await setSubscriptionPrice(world.clients, asset.address, 300);
     await commitAndIndex();
 
     const indexed = await queryAsset(asset.address);
-    expect(indexed.subscriptionPrice).toBe("99");
+    expect(indexed.subscriptionPrice).toBe("300");
   });
 
   it("Asset:OwnershipTransferred updates AssetEntity.owner", async () => {

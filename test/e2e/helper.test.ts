@@ -30,7 +30,7 @@ const SUB2_PK: Hex =
 async function freshAssetAndSubscriber(
   world: World,
   scenarioId: string,
-  price = 2,
+  price = 100,
   duration = 1,
   pk: Hex = SUB1_PK,
 ): Promise<{ asset: CreatedAsset; sub: Subscriber }> {
@@ -147,12 +147,12 @@ describe("scenario helpers", () => {
   });
 
   it("setSubscriptionPrice updates the on-chain price", async () => {
-    const { asset } = await freshAssetAndSubscriber(world, "setprice", 2);
-    expect(await getSubscriptionPrice(world, asset.address, 1n)).toBe(2n);
+    const { asset } = await freshAssetAndSubscriber(world, "setprice", 100);
+    expect(await getSubscriptionPrice(world, asset.address, 1n)).toBe(100n);
 
-    await setSubscriptionPrice(world.clients, asset.address, 99);
+    await setSubscriptionPrice(world.clients, asset.address, 300);
 
-    expect(await getSubscriptionPrice(world, asset.address, 1n)).toBe(99n);
+    expect(await getSubscriptionPrice(world, asset.address, 1n)).toBe(300n);
   });
 
   it("claimCreatorFee transfers accrued tokens to the asset owner", async () => {
