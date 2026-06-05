@@ -136,7 +136,7 @@ describe("entity metadata", () => {
       world.clients,
       world.base.registryAddress,
       "metadata_asset_owner",
-      2,
+      100,
       1,
       world.base.tokenAddress,
       world.base.deployer,

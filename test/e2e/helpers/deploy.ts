@@ -109,11 +109,15 @@ export async function createAsset(
   }
   // `abi` is the wide Abi type (artifact loader returns Abi for any contract),
   // so parseEventLogs cannot statically resolve AssetCreated's arg shape. The
-  // ABI we passed in is AssetRegistry's; AssetCreated has an `asset` arg.
-  const { asset } = created.args as unknown as { asset: Address };
+  // ABI we passed in is AssetRegistry's; AssetCreated's address arg is
+  // `assetAddress` (renamed from `asset` in the 1.0.0 contracts). NOTE: this
+  // cast bypasses typecheck — if the field is renamed again, the failure is a
+  // runtime `undefined` address (OpcodeNotFound on the next call), not a
+  // compile error.
+  const { assetAddress } = created.args as unknown as { assetAddress: Address };
 
   return {
-    address: asset,
+    address: assetAddress,
     assetId,
     assetIdHash,
     subscriptionPrice,
