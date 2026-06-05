@@ -289,15 +289,10 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "getSubscription",
+    "name": "getSubscriptionDuration",
     "inputs": [
       {
         "name": "_assetId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "_subscriber",
         "type": "bytes32",
         "internalType": "bytes32"
       }
@@ -313,10 +308,15 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
-    "name": "getSubscriptionDuration",
+    "name": "getSubscriptionExpiration",
     "inputs": [
       {
         "name": "_assetId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_subscriber",
         "type": "bytes32",
         "internalType": "bytes32"
       }
@@ -385,7 +385,55 @@ export const AssetRegistryABI = [
   },
   {
     "type": "function",
+    "name": "isSubscriberRevoked",
+    "inputs": [
+      {
+        "name": "_assetId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isSubscriptionActive",
+    "inputs": [
+      {
+        "name": "_assetId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_subscriber",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isSubscriptionExpired",
     "inputs": [
       {
         "name": "_assetId",
@@ -542,7 +590,7 @@ export const AssetRegistryABI = [
         "internalType": "bytes32"
       },
       {
-        "name": "asset",
+        "name": "assetAddress",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -681,6 +729,11 @@ export const AssetRegistryABI = [
   {
     "type": "error",
     "name": "OnlyAssetUnauthorizedAccount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyUnrevokedUnauthorizedSubscriber",
     "inputs": []
   },
   {

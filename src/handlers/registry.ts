@@ -15,7 +15,7 @@ import { refreshSubscriberClaimable } from "./claimable";
 
 ponder.on("AssetRegistry:AssetCreated", async ({ event, context }) => {
   const chainId = context.chain?.id as number;
-  const assetAddress = event.args.asset.toLowerCase();
+  const assetAddress = event.args.assetAddress.toLowerCase();
   const owner = event.args.owner.toLowerCase();
   const tokenAddress = event.args.tokenAddress.toLowerCase();
   const registryAddress = event.log.address.toLowerCase();
