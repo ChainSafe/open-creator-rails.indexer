@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v1.1.0...v1.1.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* registry address ([#100](https://github.com/ChainSafe/open-creator-rails.indexer/issues/100)) ([5b6480b](https://github.com/ChainSafe/open-creator-rails.indexer/commit/5b6480b1b83289bb7a1a9a1daa84cc78820e9450))
+
 ## [1.1.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v1.0.0...v1.1.0) (2026-06-08)
 
 
