@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v1.0.0...v1.1.0) (2026-06-08)
+
+
+### Features
+
+* add new base registry ([#98](https://github.com/ChainSafe/open-creator-rails.indexer/issues/98)) ([452ec3c](https://github.com/ChainSafe/open-creator-rails.indexer/commit/452ec3ccd1e9c615f87be2e1892c66f2aa059d1e))
+
 ## [1.0.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v0.10.1...v1.0.0) (2026-06-05)
 
 
