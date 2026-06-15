@@ -27,7 +27,7 @@
     "viem": "^2.52.0"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "concurrently": "^10.0.3",
     "eslint": "^8.54.0",
     "eslint-config-ponder": "^0.16.6",
