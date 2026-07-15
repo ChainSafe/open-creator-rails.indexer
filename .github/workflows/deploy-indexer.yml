@@ -48,7 +48,7 @@ jobs:
   deploy:
     name: Deploy Indexer
     runs-on: ubuntu-latest
-    timeout-minutes: 180 # 3 hour max for long backfills
+    timeout-minutes: 260 # 4h20m — 4h backfill wait (step 7) + ~20m for the other steps
 
     env:
       PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
@@ -238,7 +238,7 @@ jobs:
         if: steps.detect.outputs.mode == 'blue-green'
         run: |
           DOMAIN="${{ steps.domain.outputs.target_domain }}"
-          TIMEOUT=7200  # 2 hours
+          TIMEOUT=14400  # 4 hours
           INTERVAL=30
           ELAPSED=0
 
