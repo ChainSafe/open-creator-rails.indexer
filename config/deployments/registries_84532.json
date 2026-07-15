@@ -10,5 +10,11 @@
     "registryFeeShare": 0,
     "owner": "0x55fe6648829FB39Ea9330CBbcF9c9a8428131887",
     "assets": []
+  },
+  {
+    "address": "0xF5a1139Ee4EC9aBA132999a10D752aDE7EF0F6fE",
+    "registryFeeShare": 0,
+    "owner": "0x55fe6648829FB39Ea9330CBbcF9c9a8428131887",
+    "assets": []
   }
 ]
