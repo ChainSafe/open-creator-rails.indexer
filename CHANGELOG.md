@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v1.1.1...v1.2.0) (2026-07-15)
+
+
+### Features
+
+* add Base Sepolia registry and raise deploy backfill timeouts ([#116](https://github.com/ChainSafe/open-creator-rails.indexer/issues/116)) ([2e2bad0](https://github.com/ChainSafe/open-creator-rails.indexer/commit/2e2bad04347e09435421a700fd31bd9f588d2912))
+
 ## [1.1.1](https://github.com/ChainSafe/open-creator-rails.indexer/compare/v1.1.0...v1.1.1) (2026-06-08)
 
 
